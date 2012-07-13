@@ -21,21 +21,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import gtk
-from form import Window
 
-class Main(object):
-    
-    def __init__(self):
         
-        self.main_win = Window()
-        # Init main_win events.       
-        self.main_win.connect("destroy", gtk.main_quit)
-        self.main_win.show_all()
+        
+        
         
     
-    
-    
-    
-Main()
-gtk.main()

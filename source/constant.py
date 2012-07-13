@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2012 Deepin, Inc.
+# Copyright (C) 2012 SANGUO, Inc.
 #               2012 Hailong Qiu
 #
 # Author:     Hailong Qiu <356752238@qq.com>
@@ -20,24 +20,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# APP : media player window.
-APP_WIDTH  = 640 # media player width.
-APP_HEIGHT = 480 # media player height.
-DRAW_PIXBUF_Y = 27 # media player titlebar.
-DRAW_PIXBUF_HEIGHT = 2 # media player height.
-PANEL_HEIGHT = 20 # panel height.
-TOOLBAR_WIDTH = 1 # toolbar width.
-TOOLBAR_HEIGHT = 25 # toolbar height.
-PROGRESSBAR_WIDTH = -1 # progressbar width.
-PROGRESSBAR_HEIGHT = 5 # progressbar height.
-DRAW_PROGRESSBAR_X_PADDING = 1
-DRAW_PROGRESSBAR_Y_PADDING = 1
-DRAW_PROGRESSBAR_WIDTH_PADDING = 2 
-DRAW_PROGRESSBAR_LINE_WIDTH_PADDING = 5
-# preview
-PREVIEW_TIME_POS = 80
-PREVIEW_PV_WIDTH = 120
-PREVIEW_PV_HEIGHT = 60
 
-PROGRAM_NAME = "deepin-media-player"
-PROGRAM_VERSION = "1.0"
+# APP : media player window.
+APP_INIT_WIDTH  = 640 
+APP_INIT_HEIGHT = 480
+APP_NAME = "Visible python"
+APP_VERSION = "1.0"

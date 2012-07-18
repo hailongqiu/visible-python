@@ -22,9 +22,12 @@
 
 
 import gtk
-
+import cairo
+import pangocairo
 
 all_widget = []
+
+        
 
 def draw_background(cr, x, y, w, h, pixbuf_path):
     button_pixbuf = gtk.gdk.pixbuf_new_from_file(pixbuf_path)

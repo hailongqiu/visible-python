@@ -186,10 +186,28 @@ class CodeEdit(gtk.ScrolledWindow):
                 return " + ".join(key_modifiers) + " + " + key_name
             
             
+    def get_cli_text(self, clipboard, text, data):
+        print "get_cli_text:"
+        
+        print len(text)
+        
+        text = text.decode("utf-8")
+        if text[-1] == "\n":
+            text = text[:-1]
+            
+        for ch in text:
+            if ch == "\n":
+                # self.Enter()
+                pass
+            print ch    
+        
     def key_press_event(self, widget, event):                    
         print "key_press_event:"
-        print self.get_keyevent_name(event)
-        
+        key_name = self.get_keyevent_name(event)
+        if key_name == "Ctrl + c":
+            cli = gtk.Clipboard()
+            # cli.set_text("fjskdlf")
+            cli.request_text(self.get_cli_text)
         # self.im.filter_keypress(event)
         # if   event.keyval == 65362:
         #     self.move_cursor("Up")

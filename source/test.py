@@ -6,7 +6,6 @@ import pangocairo
 import pango
 import cairo
 
-
 class CodeEdit(gtk.ScrolledWindow):        
     def __init__(self):
         gtk.ScrolledWindow.__init__(self)

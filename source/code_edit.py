@@ -58,7 +58,7 @@ class CodeEdit(gtk.ScrolledWindow):
         self.row_border_width = 70                
         self.expose_row_border_bool = False
         self.text_view_padding_x = 15
-        
+        # read file.
         self.file_path = None
         '''Init Operation.''' # 123456
         self.start_row       = 0
@@ -130,7 +130,7 @@ class CodeEdit(gtk.ScrolledWindow):
         ### text_source_view.
         '''Init text_source_view.'''
         self.text_source_view = gtk.Button()
-        self.text_source_view.set_size_request(888, 800)
+        # self.text_source_view.set_size_request(888, 800)
         self.text_source_view.set_can_focus(True)
         self.text_source_view.grab_focus()        
         '''Init text_source_view event.'''
@@ -181,7 +181,9 @@ class CodeEdit(gtk.ScrolledWindow):
                 self.move_copy_state = MOVE_COPY_STATE_RIGHT
                 
             self.end_index_padding_x = self.get_motion_cursor_position(widget, event, self.end_row)
-            
+            self.cursor_padding_x    = self.end_index_padding_x
+            self.cursor_row = self.end_row
+            self.end_index  = self.current_colume
             self.move_copy_draw_bool = True
         ################################    
         self.queue_draw()
@@ -573,8 +575,8 @@ class CodeEdit(gtk.ScrolledWindow):
                 temp_value = self.get_expose_start_and_end_row()[2] -  self.cursor_row - temp_padding_row
                 self.get_vadjustment().set_value(self.get_vadjustment().get_value() - temp_value * self.code_font_height)
                 
-            self.Cursor_Attr()
-                        
+            self.Cursor_Attr()                          
+            
     def get_expose_start_and_end_row(self):
         start_position_row = self.get_vadjustment().get_value() / self.code_font_height
         end_position_row   = int(self.allocation.height-10) / self.code_font_height
@@ -647,6 +649,7 @@ class CodeEdit(gtk.ScrolledWindow):
     def expose_draw_text_source_view(self, widget, event):    
         cr = widget.window.cairo_create()
         rect = widget.allocation
+        
         # Draw background.
         self.draw_text_source_view_background(cr, rect)
         # Draw code line.
@@ -739,7 +742,7 @@ class CodeEdit(gtk.ScrolledWindow):
         start_position_row = int(self.get_vadjustment().get_value() / self.code_font_height)
         end_position_row   = int(self.allocation.height / self.code_font_height)
         temp_row = end_position_row  + start_position_row
-        
+                        
         if temp_row > self.current_row + 1:
             temp_row = self.current_row + 1
             
@@ -791,8 +794,7 @@ class CodeEdit(gtk.ScrolledWindow):
         else:    
             temp_end_row   += 0
             temp_start_row -= 1
-            
-            
+        
         if self.move_copy_state == MOVE_COPY_STATE_MID:
             temp_padding_width = self.end_index_padding_x - self.start_index_padding_x 
             cr.rectangle(
@@ -823,8 +825,8 @@ class CodeEdit(gtk.ScrolledWindow):
                 else:        
                     temp_width     = rect.width
                     temp_padding_x = 0
-                ##################################################            
-                ### Draw rectangle.    
+                ##################################################
+                ### Draw rectangle.
                 cr.rectangle(
                     temp_x + temp_padding_x, 
                     temp_y + (row) * self.code_font_height,
@@ -955,9 +957,37 @@ class CodeEdit(gtk.ScrolledWindow):
         self.move_copy_bool = False
         self.queue_draw()
     
-    def clipboard_cut(self):    
-        pass
-    
+    def clipboard_cut(self):                                 
+        print "start_index:,", self.start_index    
+        print "end_index:", self.current_colume
+        print "start_index:", self.start_row
+        print "end_index:", self.end_row
+        print self.move_copy_state
+        print "====================="
+        
+        # Sawp start and end row.
+        if self.start_row > self.end_row:
+            temp_row = self.end_row
+            self.end_row = self.start_row
+            self.start_row = temp_row
+            
+        for row in range(self.start_row, self.end_row + 1):            
+            # for colume in range()
+            if row == self.start_row:                
+                if self.move_copy_state == MOVE_COPY_STATE_RIGHT:
+                    print "start_row --- >RIGHT: "
+                    print self.start_index
+                elif self.move_copy_state == MOVE_COPY_STATE_LEFT:    
+                    print self.end_index
+            elif row == self.end_row:    
+                if self.move_copy_state == MOVE_COPY_STATE_RIGHT:
+                    print "end_row--->RIGHT"
+                    print self.end_index
+                elif self.move_copy_state == MOVE_COPY_STATE_LEFT:    
+                    print "end_row----->LEFT:"
+                    print self.start_index
+                
+            
     def clipboard_c(self):
         pass
     
@@ -997,7 +1027,7 @@ class CodeEdit(gtk.ScrolledWindow):
         
     def read(self, file_path):        
         if os.path.exists(file_path):
-            self.read_file(file_path)
+            self.read_file(file_path)            
         else:    
             self.perror("讀取文件錯誤!!")
                     
@@ -1019,8 +1049,7 @@ class CodeEdit(gtk.ScrolledWindow):
             table.token_ch = ch
             self.set_token_ch_color(ch, table)
             table.token_row = temp_row            
-            
-            
+                        
             if not self.buffer_dict.has_key(temp_row):
                 self.buffer_dict[temp_row] = []
                 
@@ -1030,7 +1059,11 @@ class CodeEdit(gtk.ScrolledWindow):
         self.buffer_dict[temp_row] = [] # delete last
         self.current_row = temp_row - 1
         self.current_colume = 0
-        self.queue_draw()
+        self.Cursor_Attr()
+        # Set height.
+        self.text_source_view.set_size_request(self.text_source_view.allocation.width,
+                                               self.current_row * self.code_font_height)
+        # self.queue_draw()
                 
     def perror(self, string):
         print "====", string, "====="
@@ -1082,7 +1115,7 @@ if __name__ == "__main__":
             self.win.set_size_request(500, 500)
             self.win.connect("destroy", gtk.main_quit)
             self.code_edit = CodeEdit()
-            self.code_edit.read("/home/long/123.py")
+            self.code_edit.read("/home/long/123.txt")
             # self.hbox = gtk.VBox()
             # self.hbox.pack_start(CodeEdit())
             # self.hbox.pack_start(self.code_edit)

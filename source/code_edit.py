@@ -42,6 +42,8 @@ class CodeEdit(gtk.ScrolledWindow):
         ### init imm.
         '''Init IMMulticontext.'''
         self.im = gtk.IMMulticontext()
+        self.im_offset_x = 0
+        self.im_offset_y = 0
         self.im.connect("commit", self.get_im_input_string)
         #######################################
         ### init value.
@@ -108,7 +110,7 @@ class CodeEdit(gtk.ScrolledWindow):
         '''Init keymap.'''
         self.keymap = {
             "F5":self.run_compile,
-            "Tab":self.Set_Tab,            
+            "Tab":self.Set_Tab,
             # "Ctrl + /":self.Revoke,
             # "Ctrl + ?":self.Cancel_Revoke,
             "Ctrl + w":self.clipboard_cut,
@@ -151,9 +153,18 @@ class CodeEdit(gtk.ScrolledWindow):
         ### add text_source_view.
         self.add_with_viewport(self.text_source_view)
         
+        self.set_im_position(0, 0)
         # gtk.timeout_add(self.cursor_time, self.set_cursor_show_bool_time)
         
-    def set_cursor_show_bool_time(self):    
+    #############################    
+    ### im input position.
+    def set_im_position(self, x1, y2):    
+        x = self.text_source_view.allocation.x + self.row_border_width + self.text_view_padding_x + x1
+        self.im.set_cursor_location((x,
+                                     0, 0, 
+                                     self.code_font_height - 5 + y2))
+        
+    def set_cursor_show_bool_time(self):
         self.cursor_show_bool = not self.cursor_show_bool
         self.queue_draw()
         return True
@@ -171,8 +182,8 @@ class CodeEdit(gtk.ScrolledWindow):
             max_row =  int(self.allocation.height / self.code_font_height)
             
             temp_row = int(min_row + max_row)
-            self.end_row = min(move_row, temp_row)
-                        
+            self.end_row = min(min(move_row, temp_row), self.current_row)
+            
             if self.start_row == self.end_row:
                 self.move_copy_state = MOVE_COPY_STATE_MID
             elif self.start_row > self.end_row:    
@@ -185,7 +196,7 @@ class CodeEdit(gtk.ScrolledWindow):
             self.cursor_row = self.end_row
             self.end_index  = self.current_colume
             self.move_copy_draw_bool = True
-        ################################    
+        ###################################    
         self.queue_draw()
         
     def get_motion_cursor_position(self, widget, event, row):    
@@ -206,9 +217,6 @@ class CodeEdit(gtk.ScrolledWindow):
         # SAve buffer.
         # import copy
         # self.temp_buffer.save_temp_buffer(copy.copy(self.buffer_dict))
-        
-        if (self.start_index - self.end_index):
-           self.Delete_Ch()
 
         text_utf_8 = text.decode('utf-8')
         
@@ -230,6 +238,10 @@ class CodeEdit(gtk.ScrolledWindow):
             
             # get current cursor position.  
             self.get_current_cursor_colume()
+                    
+            self.set_im_position(
+                0,
+                (self.cursor_row - 1) * self.code_font_height)    
             
         self.Cursor_Attr()    
         # self.queue_draw()
@@ -431,9 +443,10 @@ class CodeEdit(gtk.ScrolledWindow):
                         
         self.set_enter_last_string()            
         self.init_move_copy()    
+        self.Cursor_Attr()
         self.set_vadjustment()
         self.move_copy_bool = False
-        
+
     def set_enter_last_string(self): 
         if self.buffer_dict.has_key(self.cursor_row - 1):
             temp_string = ""    
@@ -487,16 +500,16 @@ class CodeEdit(gtk.ScrolledWindow):
                 temp_buffer_dict = self.buffer_dict[temp_row-1]
                 self.buffer_dict[temp_row] = temp_buffer_dict
                 self.buffer_dict[temp_row - 1] = []
-            
         ##########################    
         # Set cursor position.
         self.set_cursor_position(self.cursor_row - 1)        
         # restart init move copy.
         self.init_move_copy()
+        self.Cursor_Attr()
         self.move_copy_bool = False                        
         self.set_vadjustment()
         self.queue_draw()        
-        
+
     def set_cursor_position(self, cursor_row):
         if self.buffer_dict.has_key(cursor_row):
             for table in self.buffer_dict[cursor_row]:
@@ -521,8 +534,37 @@ class CodeEdit(gtk.ScrolledWindow):
                                                    self.text_source_view.allocation.height + self.code_font_height) 
 
     def Delete_Ch(self):                            
-        pass
-        
+        if self.move_copy_draw_bool:
+            self.clipboard_cut()
+        else:    
+            token_all_width = self.del_row_colume_to_end_text(self.cursor_row, max(self.current_colume-1, 0), self.current_colume)
+            self.current_colume = max(self.current_colume - 1, 0)
+            self.cursor_padding_x -= token_all_width
+            
+            if not token_all_width and self.cursor_row > 1:                
+                ##########################################
+                temp_width = 0
+                temp_colume = 0
+                for table in self.buffer_dict[self.cursor_row]:
+                    table.token_row = self.cursor_row - 1
+                    self.buffer_dict[self.cursor_row - 1].append(table)
+                    temp_width += table.token_width
+                    temp_colume += 1
+                    
+                self.buffer_dict[self.cursor_row] = []
+                self.up_move_row_text(self.cursor_row)
+                ###########################################
+                self.cursor_row -= 1
+                token_all_width = 0
+                self.current_colume = 0
+                for table in self.buffer_dict[self.cursor_row]:
+                    token_all_width += table.token_width                    
+                    self.current_colume += 1
+                self.cursor_padding_x = token_all_width  - temp_width
+                self.current_colume -= temp_colume
+                #############################################
+            self.Cursor_Attr()
+            
     def Cursor_Up(self):        
         if self.cursor_row > 1:
             token_all_width = 0            
@@ -614,7 +656,10 @@ class CodeEdit(gtk.ScrolledWindow):
         self.move_copy_draw_bool = False
         self.move_copy_bool = False
         self.queue_draw()
-        
+        self.set_im_position(
+            0,
+            (self.cursor_row - 1) * self.code_font_height)    
+
     def Set_Tab(self):
         if self.Tab_BackSpace_Num:
             if not self.buffer_dict.has_key(self.cursor_row):
@@ -718,6 +763,8 @@ class CodeEdit(gtk.ScrolledWindow):
         self.start_row = self.cursor_row
         self.end_row   = self.cursor_row
         
+        self.set_im_position(0, 
+                             (self.cursor_row - 1) * self.code_font_height)
 
     def draw_text_source_view_cursor(self, cr, rect):
         if self.cursor_show_bool:
@@ -958,36 +1005,107 @@ class CodeEdit(gtk.ScrolledWindow):
         self.queue_draw()
     
     def clipboard_cut(self):                                 
-        print "start_index:,", self.start_index    
-        print "end_index:", self.current_colume
-        print "start_index:", self.start_row
-        print "end_index:", self.end_row
-        print self.move_copy_state
-        print "====================="
-        
-        # Sawp start and end row.
-        if self.start_row > self.end_row:
-            temp_row = self.end_row
-            self.end_row = self.start_row
-            self.start_row = temp_row
-            
-        for row in range(self.start_row, self.end_row + 1):            
-            # for colume in range()
-            if row == self.start_row:                
-                if self.move_copy_state == MOVE_COPY_STATE_RIGHT:
-                    print "start_row --- >RIGHT: "
-                    print self.start_index
-                elif self.move_copy_state == MOVE_COPY_STATE_LEFT:    
-                    print self.end_index
-            elif row == self.end_row:    
-                if self.move_copy_state == MOVE_COPY_STATE_RIGHT:
-                    print "end_row--->RIGHT"
-                    print self.end_index
-                elif self.move_copy_state == MOVE_COPY_STATE_LEFT:    
-                    print "end_row----->LEFT:"
-                    print self.start_index
+        if self.move_copy_draw_bool:
+            # last text to first text.        
+            if self.start_row == self.end_row:
+                move_cursor_bool = True
+                if self.start_index > self.end_index:
+                    temp_index = self.end_index
+                    self.end_index = self.start_index
+                    self.start_index = temp_index                
+                    move_cursor_bool = False
                 
+                token_all_width = self.del_row_colume_to_end_text(self.start_row, self.start_index, self.end_index)            
+                
+                if move_cursor_bool:
+                    self.cursor_padding_x -= token_all_width 
+                    self.current_colume = self.current_colume - (self.end_index - self.start_index)# 123456
+            else:    
+                # Sawp start and end row.
+                if self.start_row > self.end_row:
+                    temp_row = self.end_row
+                    self.end_row = self.start_row
+                    self.start_row = temp_row                                    
+                    
+                for row in range(self.start_row, self.end_row + 1):            
+                    # for colume in range()
+                    if row == self.start_row:  # first.
+                        if self.move_copy_state == MOVE_COPY_STATE_RIGHT:
+                            self.del_row_colume_to_end_text(row, self.start_index, len(self.buffer_dict[row]))
+                        elif self.move_copy_state == MOVE_COPY_STATE_LEFT:
+                            if self.end_index:
+                                self.del_row_colume_to_end_text(row, self.end_index, len(self.buffer_dict[row]))
+                            else:    
+                                self.buffer_dict[row] = []                                
+                    elif row == self.end_row:    # last.
+                        if self.move_copy_state == MOVE_COPY_STATE_RIGHT:                            
+                            self.del_row_colume_to_end_text(row, 0, self.end_index)
+                            #######################
+                            ### get first row 0 - start index width.
+                            o_to_start_index_width = 0
+                            self.current_colume = 0
+                            for colume in range(0, self.start_index):
+                                width = self.buffer_dict[self.start_row][colume].token_width
+                                o_to_start_index_width += width
+                                self.current_colume = 0
+                            ##### Set cursor position.    
+                            self.cursor_row = self.start_row
+                            self.cursor_padding_x = o_to_start_index_width
+                            #############################
+                        elif self.move_copy_state == MOVE_COPY_STATE_LEFT:    
+                            self.del_row_colume_to_end_text(row, 0, self.start_index)
+                        self.end_text_to_first_text(row, self.start_row)
+                    else:#  
+                        # self.del_row_colume_to_end_text(row, 0, len(self.buffer_dict[row]))                            
+                        self.buffer_dict[row] = []
+                        
+                temp_start_row = self.start_row        
+                if self.buffer_dict[self.start_row]:        
+                    temp_start_row = self.start_row + 1
+                    
+                for row in range(self.end_row , temp_start_row - 1, -1):        
+                    #up move row text.
+                    self.up_move_row_text(row)
+                
+            self.Cursor_Attr()
             
+    def up_move_row_text(self, row):                
+        temp_buffer_dict = []
+        for row in range(row, self.current_row):
+            temp_buffer_dict = self.buffer_dict[row]
+            self.buffer_dict[row] = self.buffer_dict[row + 1]
+            self.buffer_dict[row + 1] = temp_buffer_dict
+            
+            for table in self.buffer_dict[row]:
+                table.token_row = row                
+
+        self.current_row = max(self.current_row - 1, 1)
+            
+    def end_text_to_first_text(self, row, type_row):        
+        #######Save row buffer_dict###########
+        temp_table = []
+        for table in self.buffer_dict[row]:
+            table.token_row = type_row
+            temp_table.append(table)
+        ######################################    
+        self.buffer_dict[row] = []
+        ######################################
+        # temp_text to first text.
+        for table in temp_table:
+            self.buffer_dict[type_row].append(table)
+        ######################################
+        
+    def del_row_colume_to_end_text(self, row, start_index, end_index):    
+        import copy
+        temp_buffer_dict = copy.copy(self.buffer_dict[row])
+        token_all_width = 0
+        for colume in range(start_index, end_index):
+            token_all_width += self.buffer_dict[row][colume].token_width
+            temp_buffer_dict.remove(self.buffer_dict[row][colume])            
+        self.buffer_dict[row] = temp_buffer_dict
+
+        return token_all_width
+    
     def clipboard_c(self):
         pass
     
@@ -1016,11 +1134,12 @@ class CodeEdit(gtk.ScrolledWindow):
         
     def save_file(self, file_path):        
         text = ""
-        for key in self.buffer_dict.keys():            
-            for table in self.buffer_dict[key]:
-                text += table.token_ch
-            text += "\n"
-        
+        for key in self.buffer_dict.keys():
+            if key <= self.current_row:
+                for table in self.buffer_dict[key]:
+                    text += table.token_ch                
+                text += "\n"
+                
         fp = open(file_path, "w")    
         fp.write(text)
         fp.close()
@@ -1034,15 +1153,20 @@ class CodeEdit(gtk.ScrolledWindow):
     def read_file(self, file_path):
         self.file_path = file_path        
         fp = open(self.file_path, "r")
-        temp_row = self.current_row
+        temp_row = 1
         # temp_buffer = {}
         text = fp.read().decode("utf-8")
         fp.close()                
-
+        
+        max_colume = 0
+        
         for ch in text:            
-            if ch == "\n":                
+            if ch == "\n":
                 temp_row += 1
                 self.current_colume = 0
+                #read empty line no show.
+                if not self.buffer_dict.has_key(temp_row):
+                    self.buffer_dict[temp_row] = []
                 continue                            
             
             table = Table()
@@ -1055,14 +1179,19 @@ class CodeEdit(gtk.ScrolledWindow):
                 
             self.buffer_dict[temp_row].insert(self.current_colume, table)
             self.current_colume += 1
-            
+            if self.current_colume > max_colume:
+                max_colume = self.current_colume
+                
         self.buffer_dict[temp_row] = [] # delete last
-        self.current_row = temp_row - 1
+        self.current_row = max(temp_row - 1, 1)
         self.current_colume = 0
+        
+        # Set height and width(text_source_view size).
+        text_source_view_padding_height = 50
+        text_source_view_padding_width  = 200
+        self.text_source_view.set_size_request(max_colume * self.code_font_width + text_source_view_padding_width,
+                                               self.current_row * self.code_font_height + text_source_view_padding_height)        
         self.Cursor_Attr()
-        # Set height.
-        self.text_source_view.set_size_request(self.text_source_view.allocation.width,
-                                               self.current_row * self.code_font_height)
         # self.queue_draw()
                 
     def perror(self, string):

@@ -133,7 +133,7 @@ class CodeEdit(gtk.ScrolledWindow):
         except:
             self.imm_y = 0
             
-        self.im.set_cursor_location((self.imm_x, self.imm_y, self.imm_x, self.imm_y))
+            self.im.set_cursor_location((self.imm_x, self.imm_y, self.imm_x, self.imm_y))
         
     def get_text_view_focus_out(self, widget, event):    
         self.im.focus_out()

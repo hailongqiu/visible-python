@@ -42,178 +42,242 @@ class SymbolTable(object):
 class Scan(object):        
     def __init__(self, language_file):
         self.symbol_table_list = []
+        
         self.symbol = ["~", "`", "!", "@", "#", 
                        "$", "%", "^", "&", "*",                        
                        "(", ")", "+", "-", 
                        "=", "[", "{", "}", "]", 
                        "|", "\\", ":", ";", "'", 
-                       "<", ",", ">", ".", "/", "?"]        
+                       "<", ",", ">", ".", "/", "?", '"', "_"]                
         
         self.config = Config(language_file)
         self.keyword = self.config.get_argvs("keyword").keys()
-        ##########Index.###########################
+        '''Init value.'''
         self.index = 0
         self.start_index = 0
         self.end_index = 0
+        self.next = 0
+        self.pre  = 0
         self.row  = None
-        ###########save text and token.############
+        
         self.text  = ""
         self.token = ""
-        self.type  = 4
         
-        self.class_type = "class"
-        self.function_type = "def"
-        self.variable_type = "self"
+        self.type           = SYMBOL_TABLE_VARIABLE_TYPE
+        self.function_type  = ["def"]
+        self.class_type     = ["class"]
+        self.variable_type  = ["self"]
         
     def scan(self, text, row):    
+        # Save text and row.
         self.text = text
         self.row  = row
-        while True:
-            ch = self.text[self.index]
-            if ch not in [" "]:
-                if ('a' <= ch <= 'z') or ('A' <= ch <= 'Z'):
-                    self.type_bool(ch)                    
-                elif '0' <= ch <= '9':    
-                    self.start_index = self.index
-                    self.number_bool(ch)
-                elif ch in self.symbol:
-                    print "符号处理:...", ch
-                    print "start_index:", self.index
-                    print "end_index:", self.index
-                    self.index += 1            
-            else:
-                self.index += 1
+        # Read token.
+        if self.text:
+            while True:
+                ch = self.text[self.index]
+                if ch not in [" "]:
+                    if self.letter_bool(ch):
+                        print "======字母处理===="
+                        self.letter_function()
+                    elif self.number_bool(ch):
+                        print "======数字处理===="
+                        self.number_function()
+                    elif self.symbol_bool(ch):    
+                        print "======符号处理===="
+                        self.symbol_function()                    
+                else:    
+                    self.index += 1
                 
-            if self.index == (len(text)):
-                break
-            
+                if self.len_text() <= self.index:
+                    break                
+                
         ########################################
         ## return symbol table list.    
         return self.symbol_table_list
     
-    ################################################################        
-    ### number bool.        
-    def number_bool(self, ch): 
-        self.token = ""
-        while True:
-            if not '0' <= self.text[self.index] <= '9' and self.text[self.index] != " ":
-                self.index = self.start_index + 1
-                self.variable_bool(self.text[self.index - 1])
-                break
-            
-            if self.text[self.index] == " ":
-                symbol_table = SymbolTable()
-                symbol_table.type  = SYMBOL_TABLE_NUMBER_TYPE
-                symbol_table.token = self.token
-                symbol_table.row   = self.row
-                symbol_table.start_index = self.start_index
-                symbol_table.end_index   = self.end_index                
-                # symbol_table.rgb = 
-                ############################################
-                print "数字:==============================="
-                print "type:", symbol_table.type
-                print "token:", symbol_table.token
-                print "row:", symbol_table.row
-                print "start_index:", symbol_table.start_index
-                print "end_index:", symbol_table.end_index
-                print "=============================="
-                ############################################
-                self.symbol_table_list.append(symbol_table)
-                break
-            else:
-                self.token += self.text[self.index]
-                
-            self.index += 1
-            
-    ################################################################        
-    ### keyword bool and variable name(class name or function name or variable name)  
-    def type_bool(self, ch): 
-        if self.keyword_bool(ch): # 
-            symbol_table = SymbolTable()
-            symbol_table.type  = SYMBOL_TABLE_KEYWORD_TYPE
-            symbol_table.token = self.token
-            symbol_table.row   = self.row
-            symbol_table.start_index = self.start_index
-            symbol_table.end_index   = self.end_index
-            symbol_table.rgb         = self.config.get("keyword", str(self.token))
-            ################################################
-            print "关键字:=================================="
-            print "type:", symbol_table.type
-            print "token:", symbol_table.token
-            print "row:", symbol_table.row
-            print "start_index:", symbol_table.start_index
-            print "end_index:", symbol_table.end_index
-            print "rgb:", symbol_table.rgb
-            print "========================================"
-            ################################################
-            self.symbol_table_list.append(symbol_table)
-            # Set type.
-            if self.token == self.class_type:
-                self.type = SYMBOL_TABLE_CLASS_TYPE
-            elif self.token == self.function_type:    
-                self.type = SYMBOL_TABLE_FUNCTION_TYPE
-            elif self.token == self.variable_type:    
-                self.type = SYMBOL_TABLE_VARIABLE_TYPE
+    def letter_function(self):
+        if self.keyword_bool(self.text[self.index]):
+            self.keyword_function()
         else:    
-            self.variable_bool(ch)
-            
-    def variable_bool(self, ch):
-        self.token = ""
-        self.token += ch
-        self.start_index = self.index
-        while True:                
-            if (self.text[self.index] in [" "]) or (self.text[self.index] in self.symbol):
-                self.end_index = self.index
-                symbol_table = SymbolTable()
-                symbol_table.type  = self.type
-                symbol_table.token = self.token
-                symbol_table.row   = self.row
-                symbol_table.start_index = self.start_index - 1
-                symbol_table.end_index   = self.end_index - 1
-                # class name or function name or VARIABLE_TYPE.
-                # symbol_table.rgb         = self.config.get("keyword", str())
-                self.symbol_table_list.append(symbol_table)                
-                #############################################
-                print "常量:================================="
-                print "type:", symbol_table.type
-                print "token:", symbol_table.token
-                print "row:", symbol_table.row
-                print "start_index:", symbol_table.start_index
-                print "end_index:", symbol_table.end_index
-                print "rgb:还未设定..."
-                print "======================================"
-                #############################################
-                break                                                
-
-            self.token += self.text[self.index]
-            self.index += 1
-
-    def keyword_bool(self, ch):
-        for key in self.keyword:
-            if key[0] == ch:
-                self.start_index = self.index # Save start index.
-                if self.keyword_bool_scan(key):
-                    return True                
-                
+            self.variable_function()
+        
         self.index += 1
-                
-    def keyword_bool_scan(self, key):            
+        
+    def keyword_function(self):
+        print "关键字处理模块:"
         self.token = ""
-        for k in key:
-            if k == self.text[self.index]:
-                self.token += self.text[self.index]
-                self.index += 1                             
+        # save pre and next point.
+        self.pre = self.index
+        self.next = self.index
+        # save start index.
+        self.start_index = self.pre
+        # get keyword list.
+        key_list = self.keyword_bool(self.text[self.index])
+        ######################################        
+        while True:
+            try:
+                keyword_ch = self.text[self.next]
+            except:
+                self.keyword_save()
+                break                        
+            
+            if self.next > self.len_text() - 1:
+                self.keyword_save()
+                self.next += 1
+                break
+            
+            if (not self.symbol_bool(keyword_ch)) and not keyword_ch in [" "]:
+                self.token += keyword_ch
+                self.next += 1
+            else:
+                self.keyword_save()
+                break
+            
+        ######################################
+        print "======================"
+        print "token:", self.token
+        print "last next:", self.next
+        # set index.            
+        self.index     = self.next
+        # save end index.
+        self.end_index = self.next
+            
+    def keyword_save(self):    
+        self.end_index = self.next
+        symbol_table = SymbolTable()
+        symbol_table.type  = SYMBOL_TABLE_NUMBER_TYPE
+        symbol_table.token = self.token
+        symbol_table.row   = self.row
+        symbol_table.start_index = self.start_index
+        symbol_table.end_index   = self.end_index - 1
+        config_rgb = self.config.get("keyword", self.token)
+        
+        if self.token in self.function_type:
+            self.type = SYMBOL_TABLE_FUNCTION_TYPE
+        elif self.token in self.class_type:    
+            self.type = SYMBOL_TABLE_CLASS_TYPE
+        elif self.token in self.variable_type:    
+            self.type = SYMBOL_TABLE_VARIABLE_TYPE
+            
+        if not config_rgb:
+            if self.type == SYMBOL_TABLE_VARIABLE_TYPE:
+                config_rgb = self.config.get("keyword", "VARIABLE")
+            elif self.type == SYMBOL_TABLE_FUNCTION_TYPE:    
+                config_rgb = self.config.get("keyword", "FUNCTION")
+            elif self.type == SYMBOL_TABLE_CLASS_TYPE:
+                config_rgb = self.config.get("keyword", "CLASS")
                 
-        if (self.index == self.start_index + len(key) and 
-                (self.text[self.index] in [" "] or self.text[self.index] in self.symbol)):
-            self.end_index = self.index - 1
-            return True
-        else:
-            self.index = self.start_index
-            return False
-                
-scan = Scan("language/python.ini")
-scan.scan("raw_input_123456 is name = 3454_abc_34 5678 class import def function(self, a, b\\)", 10)
+        symbol_table.rgb = config_rgb
+        
+        print "================="
+        print "type:", symbol_table.type
+        print "token:", symbol_table.token
+        print "row:", symbol_table.row
+        print "start_index:", symbol_table.start_index
+        print "end_index:", symbol_table.end_index - 1
+        print "rgb:", symbol_table.rgb
+        print "==========="
+        self.symbol_table_list.append(symbol_table)
+        
+    def variable_function(self):    
+        print "变量处理模块:"
+        print self.text[self.index]
+        
+    def number_function(self):
+        print "数字处理模块:"
+        # clear token.
+        self.token = ""
+        # save pre point.
+        self.pre = self.index
+        # save start index.
+        self.start_index = self.pre
+        # save next point.
+        self.next = self.index
+        
+        # print "pre:", self.pre
+        # print "next:", (self.next + self.index)
+        # print "len:", self.len_text() - 1                
+        ###################################            
+        while True:
+            try:
+                number_ch = self.text[self.next]
+            except:    
+                break
+            
+            # print "next:", self.next
+            # print "len:", self.len_text()
+
+            if self.next >= self.len_text()-1:
+                self.number_save()
+                self.next += 1
+                break
+            
+            if (not self.symbol_bool(number_ch)) and not number_ch in [" "]:
+                self.token += number_ch                
+                self.next += 1
+            else:
+                self.number_save()
+                break
+            
+        ###################################
+        # print "======================"   
+        # print "token:", self.token
+        # print "last next:", self.next
+        # set index.            
+        self.index     = self.next
+        # save end index.
+        self.end_index = self.next
+        
+    def number_save(self):    
+        self.end_index = self.next
+        symbol_table = SymbolTable()
+        symbol_table.type  = SYMBOL_TABLE_NUMBER_TYPE
+        symbol_table.token = self.token
+        symbol_table.row   = self.row
+        symbol_table.start_index = self.start_index
+        symbol_table.end_index   = self.end_index
+        config_rgb = self.config.get("keyword", "NUMBER")
+        if not config_rgb:
+            config_rgb = "#000000"
+        symbol_table.rgb = config_rgb
+        print "================="
+        print "type:", symbol_table.type
+        print "token:", symbol_table.token
+        print "row:", symbol_table.row
+        print "start_index:", symbol_table.start_index
+        print "end_index:", symbol_table.end_index
+        print "rgb:", symbol_table.rgb
+        print "==========="
+        self.symbol_table_list.append(symbol_table)
+
+    def symbol_function(self):
+        print "符号处理模块:"
+        print self.text[self.index]
+        self.index += 1
+        
+    ###################################################3    
+    ### bool function.            
+    def keyword_bool(self, ch):
+        key_list = []
+        key_index = 0
+        for key in self.keyword:
+            if key[key_index] == ch:                
+                key_list.append(key)
+        return key_list
+    
+    def letter_bool(self, ch):    
+        return (('a' <= ch <= 'z') or ('A' <= ch <= 'Z'))
+    
+    def number_bool(self, ch):    
+        return ('0' <= ch <= '9')
+        
+    def symbol_bool(self, ch):    
+        return (ch in self.symbol)
+    
+    def len_text(self):
+        return len(self.text)
+    
 ##########################################################################
 
 ##########################################################################
@@ -227,7 +291,7 @@ class Regex(object):
         print self.format
         print self.string
                 
-        self.token_bool(self.format[0])                
+        self.token_bool(self.format[0])
         start_index, end_index = 0,0
         return start_index, end_index
     
@@ -259,7 +323,10 @@ class Stack(object):
         self.__stack.append(element)
         self.__index += 1
     
-# if __name__ == "__main__":
+if __name__ == "__main__":
+    scan = Scan("language/python.ini")
+    scan.scan("int _  class", 10)
+
 #     # start_index, end_index = Regex("I love c and linux", "0-9").start_regex()
 #     # print "start_index:", start_index, "end_index:", end_index
 #     temp_stack = Stack()

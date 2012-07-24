@@ -26,6 +26,7 @@ import pangocairo
 import pango
 import cairo
 from collections import OrderedDict
+from regex import Scan
 
 MOVE_COPY_STATE_MID   = 0
 MOVE_COPY_STATE_LEFT  = 1
@@ -37,7 +38,7 @@ class CodeEdit(gtk.ScrolledWindow):
         gtk.ScrolledWindow.__init__(self)
         #######################################
         ###
-        
+        self.scan = Scan("language/python.ini")
         #######################################
         ### init imm.
         '''Init IMMulticontext.'''
@@ -175,7 +176,7 @@ class CodeEdit(gtk.ScrolledWindow):
         
     def motion_notify_event(self, widget, event):  # 123456
         #################################
-        if self.move_copy_bool:           
+        if self.move_copy_bool:
             # Get mouse move row.
             move_row = int(event.y / self.code_font_height) + 1
             min_row =  int(self.get_vadjustment().get_value() / self.code_font_height)
@@ -225,9 +226,7 @@ class CodeEdit(gtk.ScrolledWindow):
             table.token_ch = ch
             table.token_width, table.token_height = self.get_ch_size(ch)
             table.token_row = self.cursor_row
-            
-            self.set_token_ch_color(ch, table)
-            
+                                    
             if self.buffer_dict.has_key(self.cursor_row):
                 self.buffer_dict[self.cursor_row].insert(self.current_colume, table)
             else:
@@ -242,24 +241,25 @@ class CodeEdit(gtk.ScrolledWindow):
             self.set_im_position(
                 0,
                 (self.cursor_row - 1) * self.code_font_height)    
-            
+                                    
+        
+        
         self.Cursor_Attr()    
-        # self.queue_draw()
         
-    def set_token_ch_color(self, ch, table):    
-        # Test hight.
+        self.set_token_text_color(self.cursor_row)
         
-        if ch in ["邱", "海", "龙", "暴", "风"]:
-            table.token_rgb = "#F08080"
-        elif ch in ["d", "e", "f"]:    
-            table.token_rgb = "#5F9EA0"
-        elif ch in ["深", "度"]:
-            table.token_rgb = "#800000"
-        elif ch in ['L', 'i', 'n', 't']:
-            table.token_rgb = "#7B68EE"
-        elif ch in ['c', 'l', 'a', 's']:    
-            table.token_rgb = "#008000"
+    def set_token_text_color(self, row):            
+        temp_text = ""
+        for table in self.buffer_dict[row]:
+            temp_text += table.token_ch
+            
+        temp_text = temp_text.decode("utf-8")
         
+        scan = Scan("language/python.ini")        
+        for i in scan.scan(temp_text, row):
+            for colume in range(i.start_index, i.end_index+1):
+                self.buffer_dict[i.row][colume].token_rgb = str(i.rgb)
+                
     def get_current_row_string_bool(self):    
         for table in self.buffer:
             if table.token_row == self.cursor_row:
@@ -425,7 +425,7 @@ class CodeEdit(gtk.ScrolledWindow):
         
     def Enter(self):        
         self.current_row += 1        
-        self.current_colume = 0
+        self.current_colume = 0        
         self.cursor_row += 1
         
         if not self.buffer_dict.has_key(self.current_row):
@@ -435,12 +435,11 @@ class CodeEdit(gtk.ScrolledWindow):
             if self.buffer_dict.has_key(temp_row - 1):
                 for table in self.buffer_dict[temp_row-1]:
                     table.token_row = temp_row
-                
+                    
                 temp_buffer_dict = self.buffer_dict[temp_row-1]
                 self.buffer_dict[temp_row] = temp_buffer_dict
                 self.buffer_dict[temp_row - 1] = []
-
-                        
+        
         self.set_enter_last_string()            
         self.init_move_copy()    
         self.Cursor_Attr()
@@ -476,10 +475,12 @@ class CodeEdit(gtk.ScrolledWindow):
             for ch in temp_string:
                 table = Table()
                 table.token_ch = ch
-                self.set_token_ch_color(ch, table)
                 table.token_row = self.cursor_row - 1
-                self.buffer_dict[self.cursor_row - 1].insert(len(self.buffer_dict[self.cursor_row-1]), table)
+                self.buffer_dict[self.cursor_row - 1].insert(len(self.buffer_dict[self.cursor_row-1]), table)                
                 
+            # modify enter line color(rgb).    
+            self.set_token_text_color(self.cursor_row - 1)
+            
         self.cursor_padding_x = 0
 
         
@@ -565,6 +566,8 @@ class CodeEdit(gtk.ScrolledWindow):
                 #############################################
             self.Cursor_Attr()
             
+        self.set_token_text_color(self.cursor_row)    
+        
     def Cursor_Up(self):        
         if self.cursor_row > 1:
             token_all_width = 0            
@@ -1171,7 +1174,6 @@ class CodeEdit(gtk.ScrolledWindow):
             
             table = Table()
             table.token_ch = ch
-            self.set_token_ch_color(ch, table)
             table.token_row = temp_row            
                         
             if not self.buffer_dict.has_key(temp_row):

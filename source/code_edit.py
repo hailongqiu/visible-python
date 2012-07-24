@@ -1246,7 +1246,7 @@ if __name__ == "__main__":
             self.win.set_size_request(500, 500)
             self.win.connect("destroy", gtk.main_quit)
             self.code_edit = CodeEdit()
-            self.code_edit.read("/home/long/123.txt")
+            # self.code_edit.read("/home/long/123.txt")
             # self.hbox = gtk.VBox()
             # self.hbox.pack_start(CodeEdit())
             # self.hbox.pack_start(self.code_edit)

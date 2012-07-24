@@ -29,6 +29,7 @@ SYMBOL_TABLE_STRING_TYPE    = 3 # 字符串
 SYMBOL_TABLE_VARIABLE_TYPE  = 4 # 变量
 SYMBOL_TABLE_SYMBOL_TYPE    = 5 # 符号
 SYMBOL_TABLE_NUMBER_TYPE    = 6 # 数字
+SYMBOL_TABLE_NOTES_TYPE     = 7 # 注释
 
 class SymbolTable(object):
     def __init__(self):
@@ -78,14 +79,17 @@ class Scan(object):
                 ch = self.text[self.index]
                 if ch not in [" "]:
                     if self.letter_bool(ch):
-                        print "======字母处理===="
+                        # print "======字母处理===="
                         self.letter_function()
                     elif self.number_bool(ch):
-                        print "======数字处理===="
+                        # print "======数字处理===="
                         self.number_function()
                     elif self.symbol_bool(ch):    
                         print "======符号处理===="
                         self.symbol_function()                    
+                    else:    
+                        # print "======中文处理===="
+                        self.index += 1
                 else:    
                     self.index += 1
                 
@@ -96,6 +100,12 @@ class Scan(object):
         ## return symbol table list.    
         return self.symbol_table_list
     
+    def china_function(self):
+        pass
+    
+    def china_save(self):    
+        pass
+    
     def letter_function(self):
         if self.keyword_bool(self.text[self.index]):
             self.keyword_function()
@@ -105,7 +115,7 @@ class Scan(object):
         self.index += 1
         
     def keyword_function(self):
-        print "关键字处理模块:"
+        # print "关键字处理模块:"
         self.token = ""
         # save pre and next point.
         self.pre = self.index
@@ -135,9 +145,9 @@ class Scan(object):
                 break
             
         ######################################
-        print "======================"
-        print "token:", self.token
-        print "last next:", self.next
+        # print "======================"
+        # print "token:", self.token
+        # print "last next:", self.next
         # set index.            
         self.index     = self.next
         # save end index.
@@ -165,18 +175,18 @@ class Scan(object):
             self.variable_save()
         else:    
             symbol_table.rgb = config_rgb            
-            print "================="
-            print "type:", symbol_table.type
-            print "token:", symbol_table.token
-            print "row:", symbol_table.row
-            print "start_index:", symbol_table.start_index
-            print "end_index:", symbol_table.end_index - 1
-            print "rgb:", symbol_table.rgb
-            print "==========="
+            # print "================="
+            # print "type:", symbol_table.type
+            # print "token:", symbol_table.token
+            # print "row:", symbol_table.row
+            # print "start_index:", symbol_table.start_index
+            # print "end_index:", symbol_table.end_index - 1
+            # print "rgb:", symbol_table.rgb
+            # print "==========="
             self.symbol_table_list.append(symbol_table)
         
     def variable_function(self):    
-        print "变量处理模块:"
+        # print "变量处理模块:"
         # clear token.
         self.token = ""
         # save pre and next point.
@@ -205,9 +215,9 @@ class Scan(object):
                 self.variable_save()
                 break                       
         ##################################################    
-        print "======================"
-        print "token:", self.token
-        print "last next:", self.next
+        # print "======================"
+        # print "token:", self.token
+        # print "last next:", self.next
         # set index.            
         self.index     = self.next
         # save end index.
@@ -237,18 +247,18 @@ class Scan(object):
             
         symbol_table.rgb = config_rgb
         
-        print "================="
-        print "type:", symbol_table.type
-        print "token:", symbol_table.token
-        print "row:", symbol_table.row
-        print "start_index:", symbol_table.start_index
-        print "end_index:", symbol_table.end_index - 1
-        print "rgb:", symbol_table.rgb
-        print "==========="
+        # print "================="
+        # print "type:", symbol_table.type
+        # print "token:", symbol_table.token
+        # print "row:", symbol_table.row
+        # print "start_index:", symbol_table.start_index
+        # print "end_index:", symbol_table.end_index - 1
+        # print "rgb:", symbol_table.rgb
+        # print "==========="
         self.symbol_table_list.append(symbol_table)
         
     def number_function(self):
-        print "数字处理模块:"
+        # print "数字处理模块:"
         # clear token.
         self.token = ""
         # save pre point.
@@ -304,6 +314,66 @@ class Scan(object):
         if not config_rgb:
             config_rgb = "#000000"
         symbol_table.rgb = config_rgb
+        # print "================="
+        # print "type:", symbol_table.type
+        # print "token:", symbol_table.token
+        # print "row:", symbol_table.row
+        # print "start_index:", symbol_table.start_index
+        # print "end_index:", symbol_table.end_index
+        # print "rgb:", symbol_table.rgb
+        # print "==========="
+        self.symbol_table_list.append(symbol_table)
+
+    def symbol_function(self):
+        print "符号处理模块:"
+        if self.text[self.index] == '"':
+            print "字符串类型"
+            self.string_function()            
+        elif self.text[self.index] == '#':
+            print "===注释处理..."      
+            self.notes_function()
+        else:    
+            self.index += 1
+        
+    def string_function(self):    
+        self.index += 1
+    
+    def string_save(self):    
+        pass
+    
+    def notes_function(self):
+        # clear token.
+        self.token = ""
+        # set pre and next point.
+        self.pre = self.index
+        self.next = self.index
+        # set start index.
+        self.start_index = self.pre
+        
+        while True:
+            try:
+                notes_ch = self.text[self.next]
+                self.token += notes_ch
+            except:    
+                self.index     = self.next
+                self.end_index = self.next
+                self.notes_save()
+                break
+        
+            self.next += 1
+                
+    
+    def notes_save(self):
+        symbol_table = SymbolTable()
+        symbol_table.type  = SYMBOL_TABLE_NOTES_TYPE
+        symbol_table.token = self.token
+        symbol_table.row = self.row
+        symbol_table.start_index = self.start_index
+        symbol_table.end_index   = self.end_index - 1
+        config_rgb = self.config.get("keyword", "NOTES")
+        if not config_rgb:
+            config_rgb = "#000000"            
+        symbol_table.rgb = config_rgb
         print "================="
         print "type:", symbol_table.type
         print "token:", symbol_table.token
@@ -313,11 +383,6 @@ class Scan(object):
         print "rgb:", symbol_table.rgb
         print "==========="
         self.symbol_table_list.append(symbol_table)
-
-    def symbol_function(self):
-        print "符号处理模块:"
-        print self.text[self.index]
-        self.index += 1
         
     ###################################################3    
     ### bool function.            

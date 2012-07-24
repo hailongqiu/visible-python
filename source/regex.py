@@ -160,14 +160,81 @@ class Scan(object):
         elif self.token in self.variable_type:    
             self.type = SYMBOL_TABLE_VARIABLE_TYPE
             
+            
         if not config_rgb:
-            if self.type == SYMBOL_TABLE_VARIABLE_TYPE:
-                config_rgb = self.config.get("keyword", "VARIABLE")
-            elif self.type == SYMBOL_TABLE_FUNCTION_TYPE:    
-                config_rgb = self.config.get("keyword", "FUNCTION")
-            elif self.type == SYMBOL_TABLE_CLASS_TYPE:
-                config_rgb = self.config.get("keyword", "CLASS")
-                
+            self.variable_save()
+        else:    
+            symbol_table.rgb = config_rgb            
+            print "================="
+            print "type:", symbol_table.type
+            print "token:", symbol_table.token
+            print "row:", symbol_table.row
+            print "start_index:", symbol_table.start_index
+            print "end_index:", symbol_table.end_index - 1
+            print "rgb:", symbol_table.rgb
+            print "==========="
+            self.symbol_table_list.append(symbol_table)
+        
+    def variable_function(self):    
+        print "变量处理模块:"
+        # clear token.
+        self.token = ""
+        # save pre and next point.
+        self.pre = self.index
+        self.next = self.index
+        # save start index.
+        self.start_index = self.pre
+        
+        #####################################################
+        while True:
+            try:
+                variable_ch = self.text[self.next]
+            except:    
+                self.variable_save()
+                break
+            
+            if self.next > self.len_text() - 1:
+                self.variable_save()
+                self.next += 1
+                break
+            
+            if (not self.symbol_bool(variable_ch)) and not variable_ch in [" "]:
+                self.token += variable_ch
+                self.next += 1
+            else:
+                self.variable_save()
+                break                       
+        ##################################################    
+        print "======================"
+        print "token:", self.token
+        print "last next:", self.next
+        # set index.            
+        self.index     = self.next
+        # save end index.
+        self.end_index = self.next
+            
+        
+    def variable_save(self):
+        self.end_index = self.next
+        symbol_table = SymbolTable()        
+        symbol_table.token = self.token
+        symbol_table.row   = self.row
+        symbol_table.start_index = self.start_index
+        symbol_table.end_index   = self.end_index - 1
+                    
+        # save color->rgb.
+        if self.type == SYMBOL_TABLE_VARIABLE_TYPE:
+            config_rgb = self.config.get("keyword", "VARIABLE")
+        elif self.type == SYMBOL_TABLE_FUNCTION_TYPE:    
+            config_rgb = self.config.get("keyword", "FUNCTION")
+        elif self.type == SYMBOL_TABLE_CLASS_TYPE:
+            config_rgb = self.config.get("keyword", "CLASS")            
+        # save type.    
+        symbol_table.type  = self.type
+        
+        if not config_rgb:    
+            self.config_rgb = "#000000"
+            
         symbol_table.rgb = config_rgb
         
         print "================="
@@ -179,10 +246,6 @@ class Scan(object):
         print "rgb:", symbol_table.rgb
         print "==========="
         self.symbol_table_list.append(symbol_table)
-        
-    def variable_function(self):    
-        print "变量处理模块:"
-        print self.text[self.index]
         
     def number_function(self):
         print "数字处理模块:"

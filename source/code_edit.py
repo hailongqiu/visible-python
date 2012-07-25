@@ -262,9 +262,9 @@ class CodeEdit(gtk.ScrolledWindow):
         rect = self.text_source_view.allocation        
         start_position_row = int(self.get_vadjustment().get_value() / self.code_font_height)
         self.queue_draw_area(rect.x,
-                             rect.y + (self.cursor_row - start_position_row - 1) * self.code_font_height - self.code_font_height/2,
+                             rect.y + (self.cursor_row - start_position_row - 1) * self.code_font_height - self.code_font_height,
                              rect.width,
-                             self.code_font_height * 2)
+                             self.code_font_height * 2 + self.code_font_height/2)
 
     def set_token_text_color(self, row):            
         temp_text = ""
@@ -1174,49 +1174,82 @@ class CodeEdit(gtk.ScrolledWindow):
     def read_file(self, file_path):
         self.file_path = file_path        
         fp = open(self.file_path, "r")
-        temp_row = 1
-        # temp_buffer = {}
         text = fp.read().decode("utf-8")
-        fp.close()                
-        
+        fp.close()
+        self.text_list = text.split("\n")
+        self.sum_row = len(self.text_list) - 1
+        self.row_next = 0
         max_colume = 0
-        
-        for ch in text:            
-            if ch == "\n":
-                temp_row += 1
-                self.current_colume = 0
-                #read empty line no show.
-                if not self.buffer_dict.has_key(temp_row):
-                    self.buffer_dict[temp_row] = []
-                continue                            
+                
+        if self.sum_row > 1000:
+            self.row_next = 1000
+            gtk.timeout_add(500, self.read_max_file_time)    
+        else:    
+            self.row_next = self.sum_row
             
-            table = Table()
-            table.token_ch = ch
-            table.token_row = temp_row            
-                        
-            if not self.buffer_dict.has_key(temp_row):
-                self.buffer_dict[temp_row] = []
+        # first read file init.
+        for i in range(0, self.row_next):
+            self.buffer_dict[i] = []
+            self.current_colume = 0
+            for ch in self.text_list[i]:
+                table = Table()
+                table.token_ch = ch
+                table.token_row = i
                 
-            self.buffer_dict[temp_row].insert(self.current_colume, table)
-            self.current_colume += 1
-            if self.current_colume > max_colume:
-                max_colume = self.current_colume
+                self.buffer_dict[i].insert(self.current_colume, table)                
+                self.current_colume += 1
                 
-        self.buffer_dict[temp_row] = [] # delete last
-        self.current_row = max(temp_row - 1, 1)
-        self.current_colume = 0
-        
+                if self.current_colume > max_colume:
+                    max_colume = self.current_colume
+
+        self.current_row = self.row_next
+                
         # Set height and width(text_source_view size).
         text_source_view_padding_height = 50
         text_source_view_padding_width  = 200
         self.text_source_view.set_size_request(max_colume * self.code_font_width + text_source_view_padding_width,
-                                               self.current_row * self.code_font_height + text_source_view_padding_height)        
+                                               self.sum_row * self.code_font_height + text_source_view_padding_height)
         self.Cursor_Attr()
-        # self.queue_draw()
-                
-    def perror(self, string):
-        print "====", string, "====="
         
+        
+    def read_max_file_time(self):    
+        max_colume = 0
+        read_start = self.row_next
+        if (self.row_next + 1000) > self.sum_row:
+            read_end = self.sum_row
+        else:    
+            self.row_next += 1000
+            read_end   = self.row_next
+        
+        # first read file init.
+        for row in range(read_start, read_end):
+            self.buffer_dict[row] = []
+            self.current_colume = 0
+            for ch in self.text_list[row]:
+                table = Table()
+                table.token_ch = ch
+                table.token_row = row
+                
+                self.buffer_dict[row].insert(self.current_colume, table)                
+                self.current_colume += 1
+                
+                if self.current_colume > max_colume:
+                    max_colume = self.current_colume
+                    
+        self.current_row = read_end
+        # set width and height.            
+        text_source_view_padding_height = 50
+        text_source_view_padding_width  = 200                    
+        self.text_source_view.set_size_request(max_colume * self.code_font_width + text_source_view_padding_width,
+                                               self.sum_row * self.code_font_height + text_source_view_padding_height)
+                    
+        if read_end == self.sum_row:
+            return False
+        return True
+    
+    
+    def perror(self, string):
+        print "====", string, "====="        
         
 
 
@@ -1265,6 +1298,7 @@ if __name__ == "__main__":
             self.win.connect("destroy", gtk.main_quit)
             self.code_edit = CodeEdit()
             self.code_edit.read("/home/long/123.txt")
+            # self.code_edit.read("/home/long/123.py")
             # self.hbox = gtk.VBox()
             # self.hbox.pack_start(CodeEdit())
             # self.hbox.pack_start(self.code_edit)

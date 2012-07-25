@@ -157,6 +157,11 @@ class CodeEdit(gtk.ScrolledWindow):
         self.set_im_position(0, 0)
         # gtk.timeout_add(self.cursor_time, self.set_cursor_show_bool_time)
         
+        # test plugins.
+        module = __import__('plugins.%s'%("devhelp"),
+                   fromlist=["devhelp"])
+        getattr(module, "devhelp")(self)
+        
     #############################    
     ### im input position.
     def set_im_position(self, x1, y2):    
@@ -1246,7 +1251,7 @@ if __name__ == "__main__":
             self.win.set_size_request(500, 500)
             self.win.connect("destroy", gtk.main_quit)
             self.code_edit = CodeEdit()
-            # self.code_edit.read("/home/long/123.txt")
+            self.code_edit.read("/home/long/123.txt")
             # self.hbox = gtk.VBox()
             # self.hbox.pack_start(CodeEdit())
             # self.hbox.pack_start(self.code_edit)

@@ -85,7 +85,7 @@ class Scan(object):
                         # print "======数字处理===="
                         self.number_function()
                     elif self.symbol_bool(ch):    
-                        print "======符号处理===="
+                        # print "======符号处理===="
                         self.symbol_function()                    
                     else:    
                         # print "======中文处理===="
@@ -325,12 +325,12 @@ class Scan(object):
         self.symbol_table_list.append(symbol_table)
 
     def symbol_function(self):
-        print "符号处理模块:"
+        # print "符号处理模块:"
         if self.text[self.index] == '"':
-            print "字符串类型"
+            # print "字符串类型"
             self.string_function()            
         elif self.text[self.index] == '#':
-            print "===注释处理..."      
+            # print "===注释处理..."      
             self.notes_function()
         else:    
             self.index += 1
@@ -374,14 +374,14 @@ class Scan(object):
         if not config_rgb:
             config_rgb = "#000000"            
         symbol_table.rgb = config_rgb
-        print "================="
-        print "type:", symbol_table.type
-        print "token:", symbol_table.token
-        print "row:", symbol_table.row
-        print "start_index:", symbol_table.start_index
-        print "end_index:", symbol_table.end_index
-        print "rgb:", symbol_table.rgb
-        print "==========="
+        # print "================="
+        # print "type:", symbol_table.type
+        # print "token:", symbol_table.token
+        # print "row:", symbol_table.row
+        # print "start_index:", symbol_table.start_index
+        # print "end_index:", symbol_table.end_index
+        # print "rgb:", symbol_table.rgb
+        # print "==========="
         self.symbol_table_list.append(symbol_table)
         
     ###################################################3    

@@ -247,12 +247,25 @@ class CodeEdit(gtk.ScrolledWindow):
                 0,
                 (self.cursor_row - 1) * self.code_font_height)    
                                     
-        
-        
-        self.Cursor_Attr()    
-        
+                            
         self.set_token_text_color(self.cursor_row)
+        self.expose_area_input_text()
         
+    def expose_area_input_text(self):    
+        self.cursor_show_bool = True
+        self.move_copy_draw_bool = False
+        self.move_copy_bool = False
+        self.set_im_position(
+            0,
+            (self.cursor_row - 1) * self.code_font_height)    
+
+        rect = self.text_source_view.allocation        
+        start_position_row = int(self.get_vadjustment().get_value() / self.code_font_height)
+        self.queue_draw_area(rect.x,
+                             rect.y + (self.cursor_row - start_position_row - 1) * self.code_font_height - self.code_font_height/2,
+                             rect.width,
+                             self.code_font_height * 2)
+
     def set_token_text_color(self, row):            
         temp_text = ""
         for table in self.buffer_dict[row]:

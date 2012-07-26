@@ -49,7 +49,7 @@ class Scan(object):
                        "(", ")", "+", "-", 
                        "=", "[", "{", "}", "]", 
                        "|", "\\", ":", ";", "'", 
-                       "<", ",", ">", ".", "/", "?", '"', "_"]                
+                       "<", ",", ">", ".", "/", "?", '"', "_"]
         
         self.config = Config(language_file)
         self.keyword = self.config.get_argvs("keyword").keys()
@@ -86,7 +86,7 @@ class Scan(object):
                         self.number_function()
                     elif self.symbol_bool(ch):    
                         # print "======符号处理===="
-                        self.symbol_function()                    
+                        self.symbol_function()  
                     else:    
                         # print "======中文处理===="
                         self.index += 1
@@ -123,7 +123,7 @@ class Scan(object):
         # save start index.
         self.start_index = self.pre
         # get keyword list.
-        key_list = self.keyword_bool(self.text[self.index])
+        # key_list = self.keyword_bool(self.text[self.index])
         ######################################        
         while True:
             try:
@@ -278,32 +278,30 @@ class Scan(object):
             except:    
                 break
             
-            # print "next:", self.next
-            # print "len:", self.len_text()
-
-            if self.next >= self.len_text()-1:
-                self.number_save()
+            if self.next >= self.len_text()-1:                
+                self.end_index = self.next
+                if self.symbol_bool(number_ch):
+                    self.end_index -= 1 
+                    
                 self.next += 1
                 break
             
             if (not self.symbol_bool(number_ch)) and not number_ch in [" "]:
-                self.token += number_ch                
+                self.token += number_ch
                 self.next += 1
             else:
-                self.number_save()
+                self.end_index = self.next - 1                
                 break
             
         ###################################
         # print "======================"   
         # print "token:", self.token
-        # print "last next:", self.next
-        # set index.            
+        # print "last next:", self.next            
+        # set index.                        
         self.index     = self.next
-        # save end index.
-        self.end_index = self.next
+        self.number_save()
         
-    def number_save(self):    
-        self.end_index = self.next
+    def number_save(self):            
         symbol_table = SymbolTable()
         symbol_table.type  = SYMBOL_TABLE_NUMBER_TYPE
         symbol_table.token = self.token
@@ -336,10 +334,62 @@ class Scan(object):
             self.index += 1
         
     def string_function(self):    
-        self.index += 1
-    
+        # clear token.
+        self.token = ""
+        # set pre and next point.
+        self.pre  = self.index
+        self.next = self.index
+        # set start index.
+        self.start_index = self.pre        
+        
+        string_bool = False
+        ########################################
+        while True:
+            try:
+                string_ch = self.text[self.next]
+                self.token += string_ch
+                
+                if string_ch == '"' and string_bool:
+                    self.next += 1
+                    break
+                string_bool = True
+            except:    
+                break
+        
+            self.next += 1
+            
+        ###################################
+        # print "======================"   
+        # print "token:", self.token
+        # print "last next:", self.next
+            
+        # set index.            
+        self.index     = self.next
+        # save end index.
+        self.end_index = self.next
+        self.string_save()
+        
     def string_save(self):    
-        pass
+        symbol_table = SymbolTable()
+        symbol_table.type  = SYMBOL_TABLE_STRING_TYPE
+        symbol_table.token = self.token
+        symbol_table.row = self.row
+        symbol_table.start_index = self.start_index
+        symbol_table.end_index   = self.end_index - 1
+        config_rgb = self.config.get("keyword", "STRING")
+        if not config_rgb:
+            config_rgb = "#000000"
+        symbol_table.rgb = config_rgb
+        # print "================="
+        # print "type:", symbol_table.type
+        # print "token:", symbol_table.token
+        # print "row:", symbol_table.row
+        # print "start_index:", symbol_table.start_index
+        # print "end_index:", symbol_table.end_index
+        # print "rgb:", symbol_table.rgb
+        # print "==========="        
+        self.symbol_table_list.append(symbol_table)
+        
     
     def notes_function(self):
         # clear token.

@@ -160,6 +160,7 @@ class CodeEdit(gtk.ScrolledWindow):
         # test plugins.
         module = __import__('plugins.%s'%("devhelp"),
                    fromlist=["devhelp"])
+        print module
         getattr(module, "devhelp")(self)
         
     #############################    
@@ -260,10 +261,11 @@ class CodeEdit(gtk.ScrolledWindow):
             (self.cursor_row - 1) * self.code_font_height)    
 
         rect = self.text_source_view.allocation        
+        paner_rect = self.allocation
         start_position_row = int(self.get_vadjustment().get_value() / self.code_font_height)
         self.queue_draw_area(rect.x,
                              rect.y + (self.cursor_row - start_position_row - 1) * self.code_font_height - self.code_font_height,
-                             rect.width,
+                             paner_rect.width,
                              self.code_font_height * 2 + self.code_font_height/2)
 
     def set_token_text_color(self, row):            
@@ -576,6 +578,9 @@ class CodeEdit(gtk.ScrolledWindow):
                 self.cursor_row -= 1
                 token_all_width = 0
                 self.current_colume = 0
+                if not self.buffer_dict.has_key(self.cursor_row):
+                    self.buffer_dict[self.cursor_row] = []
+                    
                 for table in self.buffer_dict[self.cursor_row]:
                     token_all_width += table.token_width                    
                     self.current_colume += 1
@@ -676,7 +681,12 @@ class CodeEdit(gtk.ScrolledWindow):
         self.cursor_show_bool = True
         self.move_copy_draw_bool = False
         self.move_copy_bool = False
-        self.queue_draw()
+        # self.queue_draw()
+        rect = self.allocation
+        self.queue_draw_area(rect.x,
+                             rect.y,
+                             rect.width,
+                             rect.height)
         self.set_im_position(
             0,
             (self.cursor_row - 1) * self.code_font_height)    
@@ -1169,39 +1179,43 @@ class CodeEdit(gtk.ScrolledWindow):
         if os.path.exists(file_path):
             self.read_file(file_path)            
         else:    
-            self.perror("讀取文件錯誤!!")
-                    
+            self.perror("讀取文件錯誤!!")            
+            self.current_row = 1        
+            
     def read_file(self, file_path):
         self.file_path = file_path        
         fp = open(self.file_path, "r")
         text = fp.read().decode("utf-8")
         fp.close()
+        
         self.text_list = text.split("\n")
-        self.sum_row = len(self.text_list) - 1
+        
+        self.sum_row = max(len(self.text_list) - 1, 1)
         self.row_next = 0
         max_colume = 0
-                
+
         if self.sum_row > 1000:
             self.row_next = 1000
-            gtk.timeout_add(500, self.read_max_file_time)    
+            gtk.timeout_add(500, self.read_max_file_time)
         else:    
             self.row_next = self.sum_row
             
-        # first read file init.
-        for i in range(0, self.row_next):
-            self.buffer_dict[i] = []
+        # first read file init.        
+        for row in range(0, self.row_next):
+            self.buffer_dict[row + 1] = []
             self.current_colume = 0
-            for ch in self.text_list[i]:
+            
+            for ch in self.text_list[row]:
                 table = Table()
                 table.token_ch = ch
-                table.token_row = i
+                table.token_row = row + 1
                 
-                self.buffer_dict[i].insert(self.current_colume, table)                
+                self.buffer_dict[row + 1].insert(self.current_colume, table)
                 self.current_colume += 1
                 
                 if self.current_colume > max_colume:
                     max_colume = self.current_colume
-
+                    
         self.current_row = self.row_next
                 
         # Set height and width(text_source_view size).
@@ -1223,14 +1237,14 @@ class CodeEdit(gtk.ScrolledWindow):
         
         # first read file init.
         for row in range(read_start, read_end):
-            self.buffer_dict[row] = []
+            self.buffer_dict[row + 1] = []
             self.current_colume = 0
             for ch in self.text_list[row]:
                 table = Table()
                 table.token_ch = ch
-                table.token_row = row
+                table.token_row = row + 1
                 
-                self.buffer_dict[row].insert(self.current_colume, table)                
+                self.buffer_dict[row + 1].insert(self.current_colume, table)                
                 self.current_colume += 1
                 
                 if self.current_colume > max_colume:

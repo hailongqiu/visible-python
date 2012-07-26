@@ -1163,17 +1163,30 @@ class CodeEdit(gtk.ScrolledWindow):
     def save_to_file(self):
         self.save(self.file_path)        
         
-    def save_file(self, file_path):        
-        text = ""
-        for key in self.buffer_dict.keys():
+    def save_file(self, file_path):                
+        read_fp = open(self.file_path, "r")
+        read_text = read_fp.read().decode("utf-8")
+        read_fp.close()
+
+        read_text_list = read_text.split("\n")
+
+        for key in self.buffer_dict.keys():            
             if key <= self.current_row:
+                text = ""
                 for table in self.buffer_dict[key]:
-                    text += table.token_ch                
-                text += "\n"
-                
-        fp = open(file_path, "w")    
-        fp.write(text)
-        fp.close()
+                    text += table.token_ch 
+                    
+                try:    
+                    if read_text_list[key - 1] != text:
+                        read_text_list[key - 1] = text
+                except:
+                    read_text_list.append(text)                    
+        
+        read_text = "\n".join(read_text_list)
+        
+        write_fp = open(file_path, "w")
+        write_fp.write(read_text)
+        write_fp.close()
         
     def read(self, file_path):        
         if os.path.exists(file_path):

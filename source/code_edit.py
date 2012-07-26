@@ -1158,6 +1158,10 @@ class CodeEdit(gtk.ScrolledWindow):
             num_list = len(v_text_list) - 1
             
             if num_list > 0:
+                for row in range(self.current_row + 1,
+                                 self.current_row + num_list + 1):
+                    self.buffer_dict[row] = []
+                    
                 for row in range(self.current_row + num_list, 
                                  temp_row + num_list, -1):
                     self.buffer_dict[row] = []

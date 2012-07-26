@@ -38,7 +38,8 @@ class CodeEdit(gtk.ScrolledWindow):
         gtk.ScrolledWindow.__init__(self)
         #######################################
         ###
-        self.scan = Scan("language/python.ini")
+        # self.scan = Scan("language/python.ini")
+        self.scan_file_ini = "language/python.ini"
         #######################################
         ### init imm.
         '''Init IMMulticontext.'''
@@ -110,7 +111,7 @@ class CodeEdit(gtk.ScrolledWindow):
         self.compile_cmd = "python"
         '''Init keymap.'''
         self.keymap = {
-            "F5":self.run_compile,
+            # "F5":self.run_compile,
             "Tab":self.Set_Tab,
             # "Ctrl + /":self.Revoke,
             # "Ctrl + ?":self.Cancel_Revoke,
@@ -275,7 +276,7 @@ class CodeEdit(gtk.ScrolledWindow):
             
         temp_text = temp_text.decode("utf-8")
         
-        scan = Scan("language/python.ini")        
+        scan = Scan(self.scan_file_ini)        
         for i in scan.scan(temp_text, row):
             for colume in range(i.start_index, i.end_index+1):
                 self.buffer_dict[i.row][colume].token_rgb = str(i.rgb)
@@ -1145,12 +1146,50 @@ class CodeEdit(gtk.ScrolledWindow):
         clipboard.request_text(self.get_clipboard_text)
         
     def get_clipboard_text(self, clipboard, text, data):    
-        text = text.decode("utf-8")
-        if text[-1] == "\n":
-            text = text[:-1]
+        if text:
+            text = text.decode("utf-8")
+            if text[-1] == "\n":
+                text = text[:-1]
             
-        print "get_clipboard_text:", text    
-        
+            v_text_list = text.split("\n")
+            temp_row = self.cursor_row # save row.
+            temp_colume = self.current_colume # save colume.
+            
+            num_list = len(v_text_list) - 1
+            
+            if num_list > 0:
+                for row in range(self.current_row + num_list, 
+                                 temp_row + num_list, -1):
+                    self.buffer_dict[row] = []
+                    self.buffer_dict[row] = self.buffer_dict[row - num_list]
+                    self.buffer_dict[row - num_list] = []
+                    for colume in range(0, len(self.buffer_dict[row])):
+                        self.buffer_dict[row][colume].token_row = row
+                                                                                                    
+                # delete cursor row last text(string).
+                import copy
+                buffer_dict_row = copy.copy(self.buffer_dict[temp_row])                
+                for colume in range(temp_colume, len(buffer_dict_row)):
+                    v_text_list[num_list] += (buffer_dict_row[colume].token_ch)
+                    self.buffer_dict[temp_row].remove(buffer_dict_row[colume])
+                    
+                self.current_row += num_list
+                
+            ###########################################    
+            ## move row.    
+            for v_text in v_text_list:
+                for ch in v_text:
+                    table = Table()
+                    table.token_ch = ch
+                    table.token_width, table.token_height = self.get_ch_size(ch)
+                    table.token_row = temp_row 
+                    temp_colume += 1
+                    self.buffer_dict[temp_row].insert(temp_colume-1, table)                    
+                    
+                temp_row += 1
+                                        
+            self.Cursor_Attr()
+            
     def run_compile(self):    
         os.system(self.compile_cmd + " %s"%(self.file_path))
         

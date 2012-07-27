@@ -734,7 +734,7 @@ class CodeEdit(gtk.ScrolledWindow):
         # Draw buffer string.
         self.draw_text_source_view_buffer_string(cr, rect)
         # Draw cursor.
-        self.draw_text_source_view_cursor(cr, rect)        
+        self.draw_text_source_view_cursor(cr, rect)
         # Draw border.
         self.draw_text_source_view_border(widget, cr, rect)
         

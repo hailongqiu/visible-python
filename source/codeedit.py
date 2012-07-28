@@ -35,6 +35,8 @@ class CodeEdit(gtk.ScrolledWindow):
         
         self.init_code_line_value()
         self.init_row_border()
+        self.init_code_folding()
+        self.init_border_row_number()
         self.init_text_buffer_value()
         self.init_language_config()  # init language config.
         self.init_code_edit_config() # init code edit config.
@@ -56,10 +58,24 @@ class CodeEdit(gtk.ScrolledWindow):
 
     def init_row_border(self):    
         self.row_border_color = "#F5F5F5"
-        self.row_border_width = 70
+        self.row_border_width = 45
+        
+    def init_code_folding(self):    
+        self.code_folding_width = 15
+        
+    def init_border_row_number(self):    
+        self.row_number_color = "#000000"
+        self.row_number_alpha = 0.3
+        self.row_number_padding_x = 15
         
     def init_text_buffer_value(self):    
         self.text_buffer_list = []
+        self.current_row = 1
+        self.cursor_row  = 1
+        self.cursor_column = 0
+        self.cursor_color = "#000000"
+        self.cursor_show_bool = True
+        self.cursor_padding_x = 0
         self.map_buffer = None
         self.ch_bg_alpha = 0.5
         self.text_source_view_bg_color = "#FFFFFF"
@@ -126,8 +142,7 @@ class CodeEdit(gtk.ScrolledWindow):
     ###    
     def text_source_view_expose_event(self, widget, event):
         cr = widget.window.cairo_create() # create cairo.
-        rect = widget.allocation # text source view allocation(x, y, width, height)
-        
+        rect = widget.allocation # text source view allocation(x, y, width, height)        
         # Draw background.
         self.draw_text_source_view_background(cr, rect)
         # Draw code line.
@@ -135,10 +150,10 @@ class CodeEdit(gtk.ScrolledWindow):
         # Draw buffer text.
         self.draw_text_source_view_buffer_text(cr, rect)
         # Draw cursor.
-        # self.draw_text_source_view_cursor(cr, rect) 
+        self.draw_text_source_view_cursor(cr, rect) 
         # Draw border.
         self.draw_text_source_view_border(widget, cr, rect)
-        return True
+        return True    
     ###
     # expose function.
     ###
@@ -161,7 +176,7 @@ class CodeEdit(gtk.ScrolledWindow):
             1,
             rect.y + rect.height,
             self.code_line_color, 
-            self.code_line_alpha            
+            self.code_line_alpha
             )
         
     # draw_text_source_view_buffer_text.
@@ -178,11 +193,13 @@ class CodeEdit(gtk.ScrolledWindow):
                 else:    
                     bg_rgb = None           
                 # draw ch.
+                x_padding = rect.x + self.get_hadjustment().get_value() + self.row_border_width + self.code_folding_width
+                y_padding = rect.y + (start_row + temp_row) * self.row_font_height
                 self.draw_text_source_view_buffer_text_ch(
                     ch, 
                     cr, 
-                    rect.x + self.get_hadjustment().get_value() + self.row_border_width + all_ch_width, 
-                    rect.y + (start_row + temp_row) * self.row_font_height, 
+                    x_padding + all_ch_width, 
+                    y_padding, 
                     self.ch_bg_color,
                     bg_rgb
                     )                
@@ -194,7 +211,7 @@ class CodeEdit(gtk.ScrolledWindow):
                                              offset_x, offset_y, 
                                              fg_rgb, bg_rgb=None
                                              ):    
-        context = pangocairo.CairoContext(cr)            
+        context = pangocairo.CairoContext(cr)
         layout = context.create_layout()
         layout.set_font_description(pango.FontDescription("%s %s" % (self.font_type, self.font_size))) 
         ch_width, ch_height = self.get_ch_size(ch)
@@ -243,26 +260,66 @@ class CodeEdit(gtk.ScrolledWindow):
         cr.fill()
         # Draw code folding.
         self.draw_text_source_view_code_folding(cr, rect, -offset_x)        
+        #Draw row number.
+        self.draw_text_source_view_row_number(cr, rect, -offset_x)
 
+        
     def draw_text_source_view_code_folding(self, cr, rect, offset_x):
-        # self.draw_alpha_rectangle(
-        #     cr,
-        #     -offset_x +  code_folding_x
-        #     )
-        # temp_code_folding_x = 3
-        # cr.set_source_rgb(*self.color_to_rgb("#FFFFFF"))
-        # code_folding_x = rect.x + self.row_border_width 
-        # # draw code folding background.
-        # cr.rectangle(,
-        #               rect.y,
-        #               self.text_view_padding_x,
-        #               rect.y + rect.height)
-        # cr.fill()        
-        pass
-    
+        code_folding_x = rect.x + self.row_border_width
+        alpha = 1
+        self.draw_alpha_rectangle(
+            cr,
+            offset_x +  code_folding_x,
+            rect.y,
+            self.code_folding_width,
+            rect.y + rect.height,
+            "#FFFFFF",
+            alpha
+            )
+        
+    def draw_text_source_view_row_number(self, cr, rect, offset_x): 
+        cr.set_source_rgba(*self.color_to_rgba(self.row_number_color, self.row_number_alpha))        
+        start_position_row, end_position_row, temp_row = self.get_scrolled_window_height()
+                
+        if temp_row > self.current_row:
+            temp_row = self.current_row
+                            
+        for row_number in range(start_position_row+1, temp_row+1):
+
+            context = pangocairo.CairoContext(cr)
+            layout = context.create_layout()
+            
+            temp_font_size = self.font_size
+            if row_number == self.cursor_row:
+                temp_font_size += 1                     
+            layout.set_font_description(pango.FontDescription("%s %s" % (self.font_type, temp_font_size)))
+            (text_width, text_height) = layout.get_pixel_size()            
+            
+            x_padding = rect.x + offset_x + self.border_width + self.code_folding_width + self.row_number_padding_x
+            y_padding = rect.y + (row_number - 1) * self.row_font_height
+            layout.set_text(self.row_number_to_string(row_number))
+            cr.move_to(
+                x_padding,
+                y_padding
+                )
+            context.update_layout(layout)
+            context.show_layout(layout)
+
+        
     # draw_text_source_view_cursor.
-    # def draw_text_source_view_cursor(self, ):    
-    
+    def draw_text_source_view_cursor(self, cr, rect):    # 123456
+        if self.cursor_show_bool:
+            x_padding = rect.x + self.row_border_width + self.code_folding_width + self.cursor_padding_x
+            y_padding = rect.y + (self.cursor_row - 1) * self.row_font_height
+            self.draw_rectangle(
+                cr,
+                x_padding,
+                y_padding,
+                1,
+                self.row_font_height,
+                self.cursor_color
+                )
+
     #############################################    
     def text_source_view_button_press_event(self, widget, event):
         pass
@@ -314,7 +371,11 @@ class CodeEdit(gtk.ScrolledWindow):
             sum_row * self.row_font_height + text_source_view_padding_height
             ) 
         self.text_buffer_list = temp_text_buffer_list
+        self.current_row = sum_row - 1
         
+        self.row_border_width += self.get_ch_size(str(self.current_row))[0]
+            
+
     ############################################################    
     '''Tool function.'''
     ###
@@ -380,14 +441,26 @@ class CodeEdit(gtk.ScrolledWindow):
         cr.rectangle(x, y, w, h)
         cr.fill()
         
+    def row_number_to_string(self, row):
+        start_len = len(list(str(self.current_row)))
+        end_len  = len(list(str(row)))
+        num_len = start_len - end_len
+        string_row = ""
+        for i in xrange(1, num_len+1):
+            string_row += "0"
+        string_row += str(row)
+        return string_row
+        
 ##########################################        
 ### Test.    
 if __name__ == "__main__":
     win = gtk.Window(gtk.WINDOW_TOPLEVEL)
     win.set_title("visual python-代码编辑器")
+    win.set_size_request(500, 500)
     win.connect("destroy", gtk.main_quit)
     code_edit = CodeEdit()
     code_edit.read("/home/long/123.txt")
+    # code_edit.read("/home/long/123.py")
     win.add(code_edit)
     win.show_all()
     gtk.main()

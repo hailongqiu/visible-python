@@ -1003,7 +1003,7 @@ class CodeEdit(gtk.ScrolledWindow):
         rgb = self.color_to_rgb("#FFFFFF")
         cr.set_source_rgb(*rgb)
 
-        code_folding_x = rect.x + self.row_border_width 
+        code_folding_x = rect.x + self.row_border_width
         # draw code folding background.
         cr.rectangle(-offset_x +  code_folding_x,
                       rect.y,

@@ -31,12 +31,13 @@ from ini import Config
 
 class CodeEdit(gtk.ScrolledWindow):
     def __init__(self):
-        gtk.ScrolledWindow.__init__(self)            
+        gtk.ScrolledWindow.__init__(self) 
         
         self.init_code_line_value()
         self.init_row_border()
         self.init_code_folding()
         self.init_border_row_number()
+        self.init_cursor()
         self.init_text_buffer_value()
         self.init_language_config()  # init language config.
         self.init_code_edit_config() # init code edit config.
@@ -48,7 +49,15 @@ class CodeEdit(gtk.ScrolledWindow):
         
         # scrolled window add text source view.
         self.add_with_viewport(self.text_source_view)
+        gtk.timeout_add(888, self.show_and_hide_cursor)
         
+    def show_and_hide_cursor(self):    
+        if self.cursor_time_bool:
+            self.cursor_show_bool = not self.cursor_show_bool
+            self.row_ch_queue_draw_area("|")
+            
+        return self.cursor_time_bool
+    
     ###########################################################    
     ### Init value and connect.
     def init_code_line_value(self):    
@@ -61,21 +70,30 @@ class CodeEdit(gtk.ScrolledWindow):
         self.row_border_width = 45
         
     def init_code_folding(self):    
-        self.code_folding_width = 15
+        self.code_folding_width  = 15
+        self.code_folding_height = 0
+        self.code_folding_bg_alpha   = 1
+        self.code_folding_bg_color   = "#FFFFFF"
+        self.code_folding_line_alpha = 0.4
+        self.code_folding_line_color = "#000000"   
         
     def init_border_row_number(self):    
-        self.row_number_color = "#000000"
-        self.row_number_alpha = 0.3
+        self.row_number_color = "#4169E1"
+        self.row_number_alpha = 0.8
         self.row_number_padding_x = 15
+        
+    def init_cursor(self):    
+        self.cursor_column = 0
+        self.cursor_color = "#000000"
+        self.cursor_show_bool = True
+        self.cursor_width = 1
+        self.cursor_padding_x = 0
+        self.cursor_time_bool = False
         
     def init_text_buffer_value(self):    
         self.text_buffer_list = []
         self.current_row = 1
-        self.cursor_row  = 1
-        self.cursor_column = 0
-        self.cursor_color = "#000000"
-        self.cursor_show_bool = True
-        self.cursor_padding_x = 0
+        self.cursor_row  = 1        
         self.map_buffer = None
         self.ch_bg_alpha = 0.5
         self.text_source_view_bg_color = "#FFFFFF"
@@ -92,7 +110,7 @@ class CodeEdit(gtk.ScrolledWindow):
         self.font_type  = "文泉驿等宽微米黑"
         self.font_size  = 11
         self.column_font_width = self.get_ch_size(" ")[0]
-        self.row_font_height = self.get_ch_size(" ")[1]        
+        self.row_font_height = self.get_ch_size(" ")[1]
         
     def init_immultiontext(self):
         '''Init immulticontext.'''
@@ -102,7 +120,22 @@ class CodeEdit(gtk.ScrolledWindow):
         self.im.connect("commit", self.get_im_input_string)
         
     def get_im_input_string(self, IMMulticontext, text):    
-        print "get_im_input_string:", text
+        text_utf_8 = text.decode('utf-8')
+        
+        for ch in text_utf_8:
+            start_string, end_string = self.start_to_end_string(
+                self.cursor_row,
+                0,
+                self.cursor_column,
+                self.cursor_column,
+                len(self.text_buffer_list[self.cursor_row]) + 1
+                )
+            temp_string = start_string + ch + end_string
+            self.text_buffer_list[self.cursor_row - 1] = temp_string
+            self.cursor_padding_x += self.get_ch_size(ch)[0]
+            self.cursor_column += 1            
+            
+        self.row_line_queue_draw_area()
         
     def init_text_source_view(self):    
         self.text_source_view = gtk.Button()
@@ -110,18 +143,27 @@ class CodeEdit(gtk.ScrolledWindow):
         self.text_source_view.grab_focus()        
         '''Init text_source_view event.'''
         self.text_source_view.add_events(gtk.gdk.ALL_EVENTS_MASK)
-        self.text_source_view.connect("expose-event",          self.text_source_view_expose_event)
-        self.text_source_view.connect("button-press-event",    self.text_source_view_button_press_event)
-        self.text_source_view.connect("button-release-event",  self.text_source_view_button_release_event)
-        self.text_source_view.connect("key-press-event",       self.text_source_view_key_press_event)        
-        self.text_source_view.connect("focus-out-event",       self.text_source_view_get_text_view_focus_out)
-        self.text_source_view.connect("focus-in-event",        self.text_source_view_get_text_view_focus_in)
-        self.text_source_view.connect("motion-notify-event",   self.text_source_view_motion_notify_event)
+        self.text_source_view.connect("expose-event",          
+                                      self.text_source_view_expose_event)
+        self.text_source_view.connect("button-press-event",    
+                                      self.text_source_view_button_press_event)
+        self.text_source_view.connect("button-release-event",  
+                                      self.text_source_view_button_release_event)
+        self.text_source_view.connect("key-press-event",       
+                                      self.text_source_view_key_press_event)        
+        self.text_source_view.connect("focus-out-event",       
+                                      self.text_source_view_get_text_view_focus_out)
+        self.text_source_view.connect("focus-in-event",        
+                                      self.text_source_view_get_text_view_focus_in)
+        self.text_source_view.connect("motion-notify-event", 
+                                      self.text_source_view_motion_notify_event)
         
     def init_scroll_window_connect(self):    
         self.add_events(gtk.gdk.ALL_EVENTS_MASK)
-        self.get_hadjustment().connect("value-changed", self.scrolled_window_hadjustment_value_changed)
-        self.get_vadjustment().connect("value-changed", self.scrolled_window_vadjustment_value_changed)
+        self.get_hadjustment().connect("value-changed", 
+                                       self.scrolled_window_hadjustment_value_changed)
+        self.get_vadjustment().connect("value-changed", 
+                                       self.scrolled_window_vadjustment_value_changed)
         
     def init_keymap(self):    
         self.keymap = {}
@@ -196,16 +238,16 @@ class CodeEdit(gtk.ScrolledWindow):
                 x_padding = rect.x + self.get_hadjustment().get_value() + self.row_border_width + self.code_folding_width
                 y_padding = rect.y + (start_row + temp_row) * self.row_font_height
                 self.draw_text_source_view_buffer_text_ch(
-                    ch, 
+                    ch,
                     cr, 
-                    x_padding + all_ch_width, 
-                    y_padding, 
+                    x_padding + all_ch_width,
+                    y_padding,
                     self.ch_bg_color,
                     bg_rgb
-                    )                
-                # save ch width.    
+                    )
+                # save ch width.
                 all_ch_width += temp_ch_width
-            temp_row += 1    
+            temp_row += 1
             
     def draw_text_source_view_buffer_text_ch(self, ch, cr, 
                                              offset_x, offset_y, 
@@ -266,16 +308,27 @@ class CodeEdit(gtk.ScrolledWindow):
         
     def draw_text_source_view_code_folding(self, cr, rect, offset_x):
         code_folding_x = rect.x + self.row_border_width
-        alpha = 1
+        # draw text source code folding background.
         self.draw_alpha_rectangle(
             cr,
             offset_x +  code_folding_x,
             rect.y,
             self.code_folding_width,
             rect.y + rect.height,
-            "#FFFFFF",
-            alpha
-            )
+            self.code_folding_bg_color,
+            self.code_folding_bg_alpha
+            )                
+        # draw code folding line.
+        self.code_folding_height = self.current_row * self.row_font_height
+        self.draw_alpha_rectangle(
+            cr,
+            offset_x + code_folding_x + int(self.code_folding_width/2),
+            rect.y,
+            1,
+            rect.y + self.code_folding_height,
+            self.code_folding_line_color,
+            self.code_folding_line_alpha
+            )        
         
     def draw_text_source_view_row_number(self, cr, rect, offset_x): 
         cr.set_source_rgba(*self.color_to_rgba(self.row_number_color, self.row_number_alpha))        
@@ -307,7 +360,7 @@ class CodeEdit(gtk.ScrolledWindow):
 
         
     # draw_text_source_view_cursor.
-    def draw_text_source_view_cursor(self, cr, rect):    # 123456
+    def draw_text_source_view_cursor(self, cr, rect):
         if self.cursor_show_bool:
             x_padding = rect.x + self.row_border_width + self.code_folding_width + self.cursor_padding_x
             y_padding = rect.y + (self.cursor_row - 1) * self.row_font_height
@@ -315,21 +368,45 @@ class CodeEdit(gtk.ScrolledWindow):
                 cr,
                 x_padding,
                 y_padding,
-                1,
+                self.cursor_width,
                 self.row_font_height,
                 self.cursor_color
                 )
 
-    #############################################    
+    #############################################
     def text_source_view_button_press_event(self, widget, event):
-        pass
-    
+        move_row = int(event.y / self.row_font_height) + 1
+        min_row = self.get_scrolled_window_height()[0]
+        max_row = self.get_scrolled_window_height()[2]
+                                
+        if min_row < move_row <= max_row:
+            if 1 <= move_row <= self.current_row:
+                token_all_width = self.get_press_cursor_position(widget, event, move_row - 1)
+                self.cursor_row = move_row            
+                self.cursor_padding_x = token_all_width
+                self.cursor_show_bool = True
+                self.scrolled_window_queue_draw_area()        
+                
     def text_source_view_button_release_event(self, widget, event):
         pass
     
+    # text_source_view_key_press_event.
     def text_source_view_key_press_event(self, widget, event):
-        pass
+        self.handle_key_press(widget, event)
+        
+    def handle_key_press(self, widget, event):
+        input_method_filt = self.im.filter_keypress(event)
+        if not input_method_filt:    
+            self.handle_key_event(event)            
+        return False        
     
+    def handle_key_event(self, event):
+        key_name = self.get_keyevent_name(event)        
+        print "key_name:" , key_name
+        if self.keymap.has_key(key_name):
+            self.keymap[key_name]()
+    
+    # text_source_view_get_text_view_focus_out.        
     def text_source_view_get_text_view_focus_out(self, widget, event):
         self.im.focus_out()        
     
@@ -337,8 +414,9 @@ class CodeEdit(gtk.ScrolledWindow):
         self.im.set_client_window(widget.window)        
         self.im.focus_in()       
     
+    # text_source_view_motion_notify_event.    
     def text_source_view_motion_notify_event(self, widget, event):
-        pass        
+        pass
     
     ############################################################
     '''Operation buffer text.'''    
@@ -347,7 +425,7 @@ class CodeEdit(gtk.ScrolledWindow):
         if os.path.exists(file_path):
             self.read_file(file_path)
         else:    
-            self.perror("讀取文件錯誤!!")
+            self.perror_input("Read File Error!!......")
     
     def read_file(self, file_path):
         self.file_path = file_path                                        
@@ -375,10 +453,12 @@ class CodeEdit(gtk.ScrolledWindow):
         
         self.row_border_width += self.get_ch_size(str(self.current_row))[0]
             
-
     ############################################################    
     '''Tool function.'''
     ###
+    def perror_input(self, text):
+        print text
+        
     def get_buffer_row_start_to_end_text(self, start, end):
         return self.text_buffer_list[start:end]
     
@@ -387,9 +467,19 @@ class CodeEdit(gtk.ScrolledWindow):
     
     def color_to_rgb(self, color):
         if color[0] == '#': 
-            gdk_color = gtk.gdk.color_parse(color)
-            return (gdk_color.red / 65535.0, gdk_color.green / 65535.0, gdk_color.blue / 65535.0)
-        
+            try:
+                gdk_color = gtk.gdk.color_parse(color)
+                r = (gdk_color.red   / 65535.0)
+                g = (gdk_color.green / 65535.0)
+                b = (gdk_color.blue  / 65535.0)
+                return (r, g, b)
+            except Exception, e:
+                self.perror_input("color_to_..[Error]:color %s error-->%s"%(color, e))
+                return (0, 0, 0)
+        else:    
+            self.perror_input("color_to_..:color %s '#'"%(color))
+            return (0, 0, 0)
+            
     def color_to_rgba(self, color, alpha):    
         r,g,b = self.color_to_rgb(color)
         return r, g, b, alpha
@@ -427,7 +517,26 @@ class CodeEdit(gtk.ScrolledWindow):
             rect.height
             )
         self.queue_draw()
-    
+            
+    def row_line_queue_draw_area(self):    
+        rect = self.allocation
+        self.text_source_view.queue_draw_area(
+            rect.x,
+            rect.y + (self.cursor_row - 1) * self.row_font_height,
+            rect.width,
+            self.row_font_height
+            )
+    def row_ch_queue_draw_area(self, ch):    
+        rect = self.allocation
+        x_padding = rect.x + self.row_border_width + self.code_folding_width +  self.cursor_padding_x
+        y_padding = rect.y + (self.cursor_row - 1) * self.row_font_height
+        self.text_source_view.queue_draw_area(
+            x_padding,
+            y_padding,
+            self.get_ch_size(ch)[0],
+            self.row_font_height
+            )
+
     def get_coordinates(self, widget, x, y):
         return widget.translate_coordinates(self, x, y)
         
@@ -451,6 +560,78 @@ class CodeEdit(gtk.ScrolledWindow):
         string_row += str(row)
         return string_row
         
+    def get_press_cursor_position(self, widget, event, row):
+        '''Get index at event.'''
+        rect = widget.allocation
+        cr = widget.window.cairo_create()
+        context = pangocairo.CairoContext(cr)
+        layout = context.create_layout()
+        layout.set_font_description(pango.FontDescription("%s %s" % (self.font_size, self.font_size)))
+        
+        token_all_width = 0
+        rect = widget.allocation 
+        temp_padding_x =  self.row_border_width + self.code_folding_width
+        
+        self.cursor_column = 0
+        if event.x < temp_padding_x: 
+            return 0                
+        
+        for ch in self.text_buffer_list[row]:
+            min_padding_x = (rect.x +  temp_padding_x + token_all_width)
+            max_padding_x = (rect.x + temp_padding_x + token_all_width + self.get_ch_size(ch)[0])
+            if min_padding_x <= (event.x) <= max_padding_x:
+                break
+            else:
+                self.cursor_column += 1
+                token_all_width += self.get_ch_size(ch)[0]
+                
+        return token_all_width
+    
+    def get_key_name(self, keyval):    
+        key_unicode = gtk.gdk.keyval_to_unicode(keyval)
+        
+        if key_unicode == 0:
+            return gtk.gdk.keyval_name(keyval)
+        else:
+            return str(unichr(key_unicode))
+            
+        
+    def get_key_event_modifiers(self, key_event): 
+        modifiers = [] 
+        if key_event.state & gtk.gdk.CONTROL_MASK:
+            modifiers.append("Ctrl")            
+            
+        if key_event.state & gtk.gdk.MOD1_MASK:
+            modifiers.append("Alt")
+            
+        if key_event.state & gtk.gdk.SHIFT_MASK and (len(self.get_key_name(key_event.keyval)) != 1 or not gtk.gdk.keyval_is_upper(key_event.keyval)):        
+
+            modifiers.append("Shift")
+    
+        return modifiers
+    
+    def get_keyevent_name(self, key_event):
+        if key_event.is_modifier:
+            return ""
+        else:
+            key_modifiers = self.get_key_event_modifiers(key_event)
+            key_name      = self.get_key_name(key_event.keyval)
+            if key_modifiers == []:
+                return key_name
+            else:
+                if key_name == " ":
+                    key_name = "Space"
+                return " + ".join(key_modifiers) + " + " + key_name
+    
+    def start_to_end_string(self, 
+                            row, 
+                            start_column_1, end_column_1, 
+                            start_column_2, end_column_2
+                            ):
+        start_string = self.text_buffer_list[row - 1][start_column_1:end_column_1]
+        end_string   = self.text_buffer_list[row - 1][start_column_2:]
+        return start_string, end_string
+            
 ##########################################        
 ### Test.    
 if __name__ == "__main__":
@@ -459,8 +640,8 @@ if __name__ == "__main__":
     win.set_size_request(500, 500)
     win.connect("destroy", gtk.main_quit)
     code_edit = CodeEdit()
-    code_edit.read("/home/long/123.txt")
-    # code_edit.read("/home/long/123.py")
+    # code_edit.read("/home/long/123.txt")
+    code_edit.read("/home/long/123.py")
     win.add(code_edit)
     win.show_all()
     gtk.main()

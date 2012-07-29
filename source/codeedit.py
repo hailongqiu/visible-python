@@ -31,8 +31,7 @@ from ini import Config
 
 class CodeEdit(gtk.ScrolledWindow):
     def __init__(self):
-        gtk.ScrolledWindow.__init__(self) 
-        
+        gtk.ScrolledWindow.__init__(self)         
         self.init_code_line_value()
         self.init_row_border()
         self.init_code_folding()
@@ -92,6 +91,7 @@ class CodeEdit(gtk.ScrolledWindow):
         
     def init_text_buffer_value(self):    
         self.text_buffer_list = []
+        self.tab_string = "    "
         self.current_row = 1
         self.cursor_row  = 1        
         self.map_buffer = None
@@ -166,7 +166,10 @@ class CodeEdit(gtk.ScrolledWindow):
                                        self.scrolled_window_vadjustment_value_changed)
         
     def init_keymap(self):    
-        self.keymap = {}
+        self.keymap = {
+            "BackSpace":self.key_delete_ch,
+            "Return":self.key_enter
+            }
         
     ############################################################    
     ### scrolled window connect.
@@ -338,7 +341,7 @@ class CodeEdit(gtk.ScrolledWindow):
             temp_row = self.current_row
                             
         for row_number in range(start_position_row+1, temp_row+1):
-
+            self.text_buffer_list[row_number] = self.text_buffer_list[row_number].replace("\t", self.tab_string)
             context = pangocairo.CairoContext(cr)
             layout = context.create_layout()
             
@@ -421,6 +424,54 @@ class CodeEdit(gtk.ScrolledWindow):
     ############################################################
     '''Operation buffer text.'''    
     ###
+    def key_delete_ch(self):
+        if self.cursor_column > 0:
+            start_string, end_string = self.start_to_end_string(
+                self.cursor_row,
+                0,
+                self.cursor_column - 1,
+                self.cursor_column,
+                len(self.text_buffer_list[self.cursor_row - 1]) + 1
+                )
+            temp_text = start_string + end_string
+            self.text_buffer_list[self.cursor_row - 1] = temp_text 
+            
+            self.cursor_column = max(self.cursor_column - 1, 0)
+        
+            if self.cursor_column > 0:
+                self.cursor_padding_x = self.get_ch_size(self.text_buffer_list[self.cursor_row - 1][:self.cursor_column])[0]
+            else:    
+                self.cursor_padding_x = 0                                    
+                
+            self.row_line_queue_draw_area()    
+        else: # if column == 0
+            if self.cursor_row > 1:
+                temp_text = self.text_buffer_list[self.cursor_row - 1]
+                # get cursor position.
+                token_all_width = self.get_ch_size(self.text_buffer_list[self.cursor_row - 2])[0]
+                # set cursor_column.
+                self.cursor_column = len(self.text_buffer_list[self.cursor_row - 2])
+                # text_buffer_list connect temp_text.
+                self.text_buffer_list[self.cursor_row - 2] += temp_text
+                # delete current row text_buffer_list.
+                del self.text_buffer_list[self.cursor_row - 1]                
+                self.current_row -= 1                
+                self.cursor_row  -= 1                
+                # set cursor position.
+                self.cursor_padding_x = token_all_width
+                self.scrolled_window_queue_draw_area()
+                
+    def key_enter(self):
+        temp_text_buffer = self.text_buffer_list[self.cursor_row - 1][:self.cursor_column]        
+        temp_insert_text = self.text_buffer_list[self.cursor_row - 1][self.cursor_column:] 
+        self.text_buffer_list[self.cursor_row - 1] = temp_text_buffer
+        self.text_buffer_list.insert(self.cursor_row, temp_insert_text)        
+        self.cursor_padding_x = 0
+        self.cursor_column = 0
+        self.cursor_row += 1
+        self.current_row += 1
+        self.scrolled_window_queue_draw_area()
+        
     def read(self, file_path):
         if os.path.exists(file_path):
             self.read_file(file_path)
@@ -493,7 +544,8 @@ class CodeEdit(gtk.ScrolledWindow):
             layout.set_font_description(pango.FontDescription("%s %s" % (self.font_type, self.font_size)))
             layout.set_text(ch)
             return layout.get_pixel_size()
-        
+        return (0, 0)
+    
     def get_scrolled_window_height(self):
         '''Get row of scrolled window current height.'''
         start_position_row = int(self.get_vadjustment().get_value() / self.row_font_height)
@@ -640,8 +692,8 @@ if __name__ == "__main__":
     win.set_size_request(500, 500)
     win.connect("destroy", gtk.main_quit)
     code_edit = CodeEdit()
-    # code_edit.read("/home/long/123.txt")
-    code_edit.read("/home/long/123.py")
+    code_edit.read("/home/long/123.txt")
+    # code_edit.read("/home/long/123.py")
     win.add(code_edit)
     win.show_all()
     gtk.main()

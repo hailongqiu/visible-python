@@ -27,7 +27,8 @@ import cairo
 import pango
 import pangocairo
 
-from ini import Config
+from ini   import Config
+from regex import Scan
 
 class CodeEdit(gtk.ScrolledWindow):
     def __init__(self):
@@ -98,6 +99,7 @@ class CodeEdit(gtk.ScrolledWindow):
         self.ch_bg_alpha = 0.5
         self.text_source_view_bg_color = "#FFFFFF"
         self.ch_bg_color = "#000000"
+        self.scan_file_ini = "language/python.ini"
         
     def init_language_config(self, config_path="language/python.ini"):
         self.language_config = Config(config_path)
@@ -168,7 +170,9 @@ class CodeEdit(gtk.ScrolledWindow):
     def init_keymap(self):    
         self.keymap = {
             "BackSpace":self.key_delete_ch,
-            "Return":self.key_enter
+            "Return":self.key_enter,
+            "Ctrl + l":self.key_enter_ctrl_l,
+            "F11":self.key_full_window
             }
         
     ############################################################    
@@ -205,13 +209,13 @@ class CodeEdit(gtk.ScrolledWindow):
     # draw_text_source_view_background.
     def draw_text_source_view_background(self, cr, rect):
         self.draw_rectangle(
-            cr, 
-            rect.x, 
+            cr,
+            rect.x,
             rect.y,
             rect.width,
             rect.height,
             self.text_source_view_bg_color)
-        
+
     # draw_text_source_view_code_line.
     def draw_text_source_view_code_line(self, cr, rect):
         self.draw_alpha_rectangle(
@@ -225,18 +229,37 @@ class CodeEdit(gtk.ScrolledWindow):
             )
         
     # draw_text_source_view_buffer_text.
-    def draw_text_source_view_buffer_text(self, cr, rect):
+    def draw_text_source_view_buffer_text(self, cr, rect): # 123456
         start_row, end_row, sum_row = self.get_scrolled_window_height()
         start_column, end_column, sum_column = self.get_scrolled_window_width()
         temp_row = 0
         for text in self.get_buffer_row_start_to_end_text(start_row, sum_row):
             all_ch_width = 0
+            # get token color.
+            if text:
+                temp_token_color = []
+                scan = Scan(self.scan_file_ini)
+                for i in scan.scan(text,  #self.get_buffer_column_start_to_end_text(text, start_column, sum_column)
+                                   start_row + temp_row):
+                    for colume in range(i.start_index, 
+                                        i.end_index+1):
+                        temp_token_color.append(i.rgb)
+                        
+                # print "temp_token_color:", temp_token_color        
+            temp_token_color_column = 0    
+                
             for ch in self.get_buffer_column_start_to_end_text(text, start_column, sum_column):
                 temp_ch_width = self.get_ch_size(ch)[0]
                 if all_ch_width == 0:
                     bg_rgb = "#FF0000"
                 else:    
                     bg_rgb = None           
+                    
+                try:    
+                    fg_rgb = temp_token_color[temp_token_color_column]    
+                except:    
+                    fg_rgb = "#000000"
+                
                 # draw ch.
                 x_padding = rect.x + self.get_hadjustment().get_value() + self.row_border_width + self.code_folding_width
                 y_padding = rect.y + (start_row + temp_row) * self.row_font_height
@@ -245,11 +268,13 @@ class CodeEdit(gtk.ScrolledWindow):
                     cr, 
                     x_padding + all_ch_width,
                     y_padding,
-                    self.ch_bg_color,
+                    fg_rgb,
                     bg_rgb
                     )
                 # save ch width.
                 all_ch_width += temp_ch_width
+                
+                temp_token_color_column += 1
             temp_row += 1
             
     def draw_text_source_view_buffer_text_ch(self, ch, cr, 
@@ -420,9 +445,8 @@ class CodeEdit(gtk.ScrolledWindow):
     # text_source_view_motion_notify_event.    
     def text_source_view_motion_notify_event(self, widget, event):
         pass
-    
     ############################################################
-    '''Operation buffer text.'''    
+    '''key map'''
     ###
     def key_delete_ch(self):
         if self.cursor_column > 0:
@@ -466,16 +490,34 @@ class CodeEdit(gtk.ScrolledWindow):
         temp_insert_text = self.text_buffer_list[self.cursor_row - 1][self.cursor_column:] 
         self.text_buffer_list[self.cursor_row - 1] = temp_text_buffer
         self.text_buffer_list.insert(self.cursor_row, temp_insert_text)        
+        self.key_enter_init()
+        
+    def key_enter_ctrl_l(self):    
+        '''Emacs key catl + l'''
+        self.text_buffer_list.insert(self.cursor_row, "")
+        self.key_enter_init()
+        
+    def key_enter_init(self):
         self.cursor_padding_x = 0
         self.cursor_column = 0
         self.cursor_row += 1
         self.current_row += 1
         self.scrolled_window_queue_draw_area()
+
+    def key_full_window(self):        
+        if self.get_toplevel().window.get_state() == gtk.gdk.WINDOW_STATE_FULLSCREEN:
+            self.get_toplevel().unfullscreen()
+        else:    
+            self.get_toplevel().fullscreen()
+            
         
+    ############################################################
+    '''Operation buffer text.'''    
+    ###        
     def read(self, file_path):
         if os.path.exists(file_path):
             self.read_file(file_path)
-        else:    
+        else:
             self.perror_input("Read File Error!!......")
     
     def read_file(self, file_path):

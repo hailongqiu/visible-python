@@ -503,7 +503,7 @@ class Stack(object):
     
 if __name__ == "__main__":
     scan = Scan("language/python.ini")
-    scan.scan("int _  class", 10)
+    print scan.scan("f", 10)
 
 #     # start_index, end_index = Regex("I love c and linux", "0-9").start_regex()
 #     # print "start_index:", start_index, "end_index:", end_index

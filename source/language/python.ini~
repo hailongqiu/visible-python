@@ -50,7 +50,7 @@ type      = #1E90FF
 while     = #FFA500
 with      = #1E90FF
 
-notes_symbol = #
+notes_symbol = /
 
 CLASS     = #FF00FF
 FUNCTION  = #6495ED

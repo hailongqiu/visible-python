@@ -91,7 +91,7 @@ class CodeEdit(gtk.ScrolledWindow):
         self.cursor_time_bool = False
         
     def init_text_buffer_value(self):    
-        self.text_buffer_list = []
+        self.text_buffer_list = [""]
         self.tab_string = "    "
         self.current_row = 1
         self.cursor_row  = 1        
@@ -123,14 +123,13 @@ class CodeEdit(gtk.ScrolledWindow):
         
     def get_im_input_string(self, IMMulticontext, text):    
         text_utf_8 = text.decode('utf-8')
-        
         for ch in text_utf_8:
             start_string, end_string = self.start_to_end_string(
                 self.cursor_row,
                 0,
                 self.cursor_column,
                 self.cursor_column,
-                len(self.text_buffer_list[self.cursor_row]) + 1
+                len(self.text_buffer_list[self.cursor_row-1]) + 1
                 )
             temp_string = start_string + ch + end_string
             self.text_buffer_list[self.cursor_row - 1] = temp_string
@@ -180,7 +179,7 @@ class CodeEdit(gtk.ScrolledWindow):
     def scrolled_window_hadjustment_value_changed(self, hadjustment):
         self.scrolled_window_queue_draw_area()
     
-    def scrolled_window_vadjustment_value_changed(self, vadjustment):    
+    def scrolled_window_vadjustment_value_changed(self, vadjustment):
         self.scrolled_window_queue_draw_area()
     
     ############################################################
@@ -251,7 +250,7 @@ class CodeEdit(gtk.ScrolledWindow):
                 
             for ch in self.get_buffer_column_start_to_end_text(text, start_column, sum_column):
                 temp_ch_width = self.get_ch_size(ch)[0]
-                if all_ch_width == 0:
+                if all_ch_width == None:
                     bg_rgb = "#FF0000"
                 else:    
                     bg_rgb = None           

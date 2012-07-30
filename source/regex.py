@@ -233,12 +233,15 @@ class Scan(object):
         symbol_table.end_index   = self.end_index - 1
                     
         # save color->rgb.
-        if self.type == SYMBOL_TABLE_VARIABLE_TYPE:
+        if self.type ==   SYMBOL_TABLE_VARIABLE_TYPE:
             config_rgb = self.config.get("keyword", "VARIABLE")
         elif self.type == SYMBOL_TABLE_FUNCTION_TYPE:    
             config_rgb = self.config.get("keyword", "FUNCTION")
         elif self.type == SYMBOL_TABLE_CLASS_TYPE:
             config_rgb = self.config.get("keyword", "CLASS")            
+            
+        self.type =     SYMBOL_TABLE_VARIABLE_TYPE
+        
         # save type.    
         symbol_table.type  = self.type
         
@@ -327,7 +330,7 @@ class Scan(object):
         if self.text[self.index] == '"':
             # print "字符串类型"
             self.string_function()            
-        elif self.text[self.index] == '#':
+        elif self.text[self.index] == self.config.get("keyword", "notes_symbol"):
             # print "===注释处理..."      
             self.notes_function()
         else:    

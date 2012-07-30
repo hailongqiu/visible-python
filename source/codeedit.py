@@ -99,7 +99,10 @@ class CodeEdit(gtk.ScrolledWindow):
         self.ch_bg_alpha = 0.5
         self.text_source_view_bg_color = "#FFFFFF"
         self.ch_bg_color = "#000000"
+        self.select_row_color = "#4169E1"
+        self.select_row_alpha   = 0.1
         self.scan_file_ini = "language/python.ini"
+        
         
     def init_language_config(self, config_path="language/python.ini"):
         self.language_config = Config(config_path)
@@ -169,8 +172,20 @@ class CodeEdit(gtk.ScrolledWindow):
     def init_keymap(self):    
         self.keymap = {
             "BackSpace":self.key_delete_ch,
+            ###############################
             "Return":self.key_enter,
             "Ctrl + l":self.key_enter_ctrl_l,
+            ###############################
+            "Ctrl + p":self.cursor_up,
+            "Ctrl + n":self.cursor_down,            
+            "Ctrl + f":self.cursor_right,
+            "Ctrl + b":self.cursor_left,
+            "Ctrl + L":self.cursor_copy_row_text,
+            "Ctrl + a":self.cursor_row_start,
+            "Ctrl + e":self.cursor_row_end,
+            "Ctrl + s":self.save,
+            "Ctrl + :":self.cursor_start_insert_ch,
+            ###############################
             "F11":self.key_full_window
             }
         
@@ -197,6 +212,8 @@ class CodeEdit(gtk.ScrolledWindow):
         self.draw_text_source_view_code_line(cr, rect)
         # Draw buffer text.
         self.draw_text_source_view_buffer_text(cr, rect)
+        # Draw select row color.
+        self.draw_text_source_view_select_row(cr, rect)
         # Draw cursor.
         self.draw_text_source_view_cursor(cr, rect) 
         # Draw border.
@@ -231,7 +248,7 @@ class CodeEdit(gtk.ScrolledWindow):
             )
         
     # draw_text_source_view_buffer_text.
-    def draw_text_source_view_buffer_text(self, cr, rect): # 123456
+    def draw_text_source_view_buffer_text(self, cr, rect):
         start_row, end_row, sum_row = self.get_scrolled_window_height()
         start_column, end_column, sum_column = self.get_scrolled_window_width()
         temp_row = 0
@@ -318,16 +335,32 @@ class CodeEdit(gtk.ScrolledWindow):
                 alpha
                 )
             
+    # draw_text_source_view_select_row        
+    def draw_text_source_view_select_row(self, cr, rect):        #123456
+        paernt_rect = self.allocation        
+        self.draw_alpha_rectangle(
+            cr,
+            rect.x,
+            rect.y + (self.cursor_row - 1) * self.row_font_height,
+            paernt_rect.width,
+            self.row_font_height,
+            self.select_row_color,
+            self.select_row_alpha
+            )
+        
     # draw_text_source_view_border.        
     def draw_text_source_view_border(self, widget, cr, rect):
+        start_index = self.get_scrolled_window_height()[0]
         offset_x, offset_y = self.get_coordinates(widget, rect.x, rect.y)
-        # Draw border.
-        cr.set_source_rgb(*self.color_to_rgb(self.row_border_color))
-        cr.rectangle(-offset_x,
-                     rect.y,
-                     self.row_border_width,
-                     rect.height)
-        cr.fill()
+        # Draw border.        
+        self.draw_rectangle(
+            cr,
+            -offset_x,
+            rect.y + (start_index * self.row_font_height),
+            self.row_border_width,
+            rect.height,
+            self.row_border_color
+            )
         # Draw code folding.
         self.draw_text_source_view_code_folding(cr, rect, -offset_x)        
         #Draw row number.
@@ -505,6 +538,12 @@ class CodeEdit(gtk.ScrolledWindow):
         self.cursor_column = 0
         self.cursor_row += 1
         self.current_row += 1
+        temp_border_width = 45
+        self.row_border_width = temp_border_width + self.get_ch_size(str(self.current_row))[0]
+        self.text_source_view.set_size_request(
+            self.text_source_view.allocation.width,
+            self.text_source_view.allocation.height + self.row_font_height
+            )         
         self.scrolled_window_queue_draw_area()
 
     def key_full_window(self):        
@@ -513,6 +552,62 @@ class CodeEdit(gtk.ScrolledWindow):
         else:    
             self.get_toplevel().fullscreen()
             
+    def cursor_down(self):    
+        if self.cursor_row < self.current_row:
+            token_all_width = self.get_ch_size(self.text_buffer_list[self.cursor_row][:self.cursor_column])[0]
+            self.cursor_row += 1
+            self.cursor_padding_x = token_all_width
+            self.cursor_column = len(self.text_buffer_list[self.cursor_row-1][:self.cursor_column])            
+            self.scrolled_window_queue_draw_area()              
+        
+    def cursor_up(self):    
+        if self.cursor_row > 1:
+            token_all_width = self.get_ch_size(self.text_buffer_list[self.cursor_row - 2][:self.cursor_column])[0]
+            self.cursor_row = max(self.cursor_row - 1, 1)
+            self.cursor_padding_x = token_all_width
+            self.cursor_column = len(self.text_buffer_list[self.cursor_row-1][:self.cursor_column])
+            self.scrolled_window_queue_draw_area()              
+        else:                
+            token_all_width = self.get_ch_size(self.text_buffer_list[self.cursor_row - 1][:self.cursor_column])[0]
+            
+    def cursor_right(self):                
+        if self.cursor_column < len(self.text_buffer_list[self.cursor_row - 1]):
+            self.cursor_column += 1
+            token_all_width = self.get_ch_size(self.text_buffer_list[self.cursor_row - 1][:self.cursor_column])[0]
+            self.cursor_padding_x = token_all_width
+            self.row_line_queue_draw_area()
+
+    def cursor_left(self):        
+        if self.cursor_column > 0:
+            self.cursor_column -= 1
+            token_all_width = self.get_ch_size(self.text_buffer_list[self.cursor_row - 1][:self.cursor_column])[0]
+            self.cursor_padding_x = token_all_width
+            self.row_line_queue_draw_area()
+        
+    def cursor_row_start(self):
+        self.cursor_column = 0
+        self.cursor_padding_x = 0
+        self.row_line_queue_draw_area()
+        
+    def cursor_row_end(self):
+        self.cursor_column = len(self.text_buffer_list[self.cursor_row - 1])
+        self.cursor_padding_x = self.get_ch_size(self.text_buffer_list[self.cursor_row - 1])[0]
+        self.row_line_queue_draw_area()
+        
+    def cursor_copy_row_text(self):
+        self.key_enter_ctrl_l()
+        self.text_buffer_list[self.cursor_row - 1] = self.text_buffer_list[self.cursor_row - 2]
+        
+    def cursor_start_insert_ch(self):
+        self.cursor_start_insert_ch_function()
+    
+    def cursor_start_insert_ch_function(self):    
+        if self.text_buffer_list[self.cursor_row - 1] != "":
+            if self.text_buffer_list[self.cursor_row - 1][0] != '#':
+                self.text_buffer_list[self.cursor_row-1] = self.cursor_row_insert_text(0, "#")
+            else:
+                self.text_buffer_list[self.cursor_row-1] = self.text_buffer_list[self.cursor_row-1][1:]            
+            self.row_line_queue_draw_area()
         
     ############################################################
     '''Operation buffer text.'''    
@@ -526,11 +621,20 @@ class CodeEdit(gtk.ScrolledWindow):
             self.current_row = 1
             
     def read_file(self, file_path):
-        self.file_path = file_path                                        
+        # save read file path.
+        self.file_path = file_path
+        try:
+            self.read_file_function()
+        except Exception, e:      
+                print "read_file:--->", e
+                self.current_row = 1          
+          
+    def read_file_function(self):          
         with open(self.file_path, "r") as f:
             self.map_buffer = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
+            
         # buffer list.
-        temp_text_buffer_list = str(self.map_buffer[:]).decode("utf-8").split("\n")        
+        temp_text_buffer_list = str(self.map_buffer[:]).decode("utf-8").split("\n")
         # sum row.
         sum_row = len(temp_text_buffer_list)
         # save max column.
@@ -550,7 +654,15 @@ class CodeEdit(gtk.ScrolledWindow):
         self.current_row = sum_row - 1
         
         self.row_border_width += self.get_ch_size(str(self.current_row))[0]
-            
+        
+    def save(self):
+        self.save_file(self.file_path)
+        
+    def save_file(self, file_path):    
+        # fp = open(file_path, "w")
+        # fp.close()
+        pass
+    
     ############################################################    
     '''Tool function.'''
     ###
@@ -731,6 +843,15 @@ class CodeEdit(gtk.ScrolledWindow):
         end_string   = self.text_buffer_list[row - 1][start_column_2:]
         return start_string, end_string
             
+    def cursor_row_insert_text(self, column, text):
+        # self.text_buffer_list[self.cursor_row]
+        start_text, end_text = self.start_to_end_string(
+            self.cursor_row,
+            0, column,
+            column, len(self.text_buffer_list[self.cursor_row])
+            )
+        return start_text + text + end_text
+        
 ##########################################        
 ### Test.    
 if __name__ == "__main__":
@@ -739,8 +860,8 @@ if __name__ == "__main__":
     win.set_size_request(500, 500)
     win.connect("destroy", gtk.main_quit)
     code_edit = CodeEdit()
-    code_edit.read("/home/long/123.cpp")
-    # code_edit.read("/home/long/123.py")
+    # code_edit.read("/home/long/123.txt")
+    code_edit.read("/home/long/123.py")
     win.add(code_edit)
     win.show_all()
     gtk.main()

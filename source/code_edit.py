@@ -124,7 +124,7 @@ class CodeEdit(gtk.ScrolledWindow):
             "Ctrl + b":self.Cursor_Left,
             "Ctrl + p":self.Cursor_Up,
             "Ctrl + n":self.Cursor_Down,
-            "Ctrl + s":self.save_to_file,
+           "Ctrl + s":self.save_to_file,
             "F11":self.full_window,
             "Return":self.Enter,
             "Ctrl + l":self.Smart_Enter,

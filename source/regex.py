@@ -338,7 +338,7 @@ class Scan(object):
                 try:
                     for i in range(0, len(temp_list)):
                         type_bool = False                    
-                        if self.text[i] == temp_list[i]:
+                        if self.text[self.index + i] == temp_list[i]:
                             type_bool = True                        
                 except Exception, e:
                     print "symbol_function:-->", e

@@ -208,12 +208,15 @@ class CodeEdit(gtk.ScrolledWindow):
     ###
     # draw_text_source_view_background.
     def draw_text_source_view_background(self, cr, rect):
+        start_index = self.get_scrolled_window_height()[0]
+        panent_rect = self.allocation
         self.draw_rectangle(
             cr,
             rect.x,
-            rect.y,
+            rect.y + (start_index * self.row_font_height),
             rect.width,
-            rect.height,
+            # rect.height,
+            panent_rect.height,
             self.text_source_view_bg_color)
 
     # draw_text_source_view_code_line.
@@ -237,15 +240,13 @@ class CodeEdit(gtk.ScrolledWindow):
             all_ch_width = 0
             # get token color.
             if text:
-                temp_token_color = []
+                temp_token_fg_color = {}
                 scan = Scan(self.scan_file_ini)
-                for i in scan.scan(text,  #self.get_buffer_column_start_to_end_text(text, start_column, sum_column)
+                for table_color in scan.scan(text,  #self.get_buffer_column_start_to_end_text(text, start_column, sum_column)
                                    start_row + temp_row):
-                    for colume in range(i.start_index, 
-                                        i.end_index+1):
-                        temp_token_color.append(i.rgb)
-                        
-                # print "temp_token_color:", temp_token_color        
+                    for column in range(table_color.start_index, 
+                                        table_color.end_index+1):
+                        temp_token_fg_color[column] = table_color.rgb                        
             temp_token_color_column = 0    
                 
             for ch in self.get_buffer_column_start_to_end_text(text, start_column, sum_column):
@@ -256,7 +257,7 @@ class CodeEdit(gtk.ScrolledWindow):
                     bg_rgb = None           
                     
                 try:    
-                    fg_rgb = temp_token_color[temp_token_color_column]    
+                    fg_rgb = temp_token_fg_color[temp_token_color_column]
                 except:    
                     fg_rgb = "#000000"
                 

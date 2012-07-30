@@ -327,14 +327,29 @@ class Scan(object):
 
     def symbol_function(self):
         # print "符号处理模块:"
+        temp_list = list(self.config.get("keyword", "notes_symbol"))
         if self.text[self.index] == '"':
             # print "字符串类型"
             self.string_function()            
-        elif self.text[self.index] == self.config.get("keyword", "notes_symbol"):
+        elif self.text[self.index] == temp_list[0]:
             # print "===注释处理..."      
-            self.notes_function()
-        else:    
-            self.index += 1
+            type_bool = False
+            if len(self.text) >= len(temp_list):
+                try:
+                    for i in range(0, len(temp_list)):
+                        type_bool = False                    
+                        if self.text[i] == temp_list[i]:
+                            type_bool = True                        
+                except Exception, e:
+                    print "symbol_function:-->", e
+                    type_bool = False
+                
+            if type_bool:
+                self.notes_function()
+            else:
+                self.index += 1
+                
+        self.index += 1        
         
     def string_function(self):    
         # clear token.

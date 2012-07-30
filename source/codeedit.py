@@ -359,20 +359,24 @@ class CodeEdit(gtk.ScrolledWindow):
             )        
         
     def draw_text_source_view_row_number(self, cr, rect, offset_x): 
-        cr.set_source_rgba(*self.color_to_rgba(self.row_number_color, self.row_number_alpha))        
+        cr.set_source_rgba(*self.color_to_rgba(self.row_number_color, self.row_number_alpha))
         start_position_row, end_position_row, temp_row = self.get_scrolled_window_height()
                 
         if temp_row > self.current_row:
             temp_row = self.current_row
                             
+        if self.current_row == 1:
+            start_position_row = 0
+            temp_row = 1
+            
         for row_number in range(start_position_row+1, temp_row+1):
-            self.text_buffer_list[row_number] = self.text_buffer_list[row_number].replace("\t", self.tab_string)
+            self.text_buffer_list[row_number - 1] = self.text_buffer_list[row_number-1].replace("\t", self.tab_string)
             context = pangocairo.CairoContext(cr)
             layout = context.create_layout()
             
             temp_font_size = self.font_size
             if row_number == self.cursor_row:
-                temp_font_size += 1                     
+                temp_font_size += 1
             layout.set_font_description(pango.FontDescription("%s %s" % (self.font_type, temp_font_size)))
             (text_width, text_height) = layout.get_pixel_size()            
             
@@ -385,7 +389,6 @@ class CodeEdit(gtk.ScrolledWindow):
                 )
             context.update_layout(layout)
             context.show_layout(layout)
-
         
     # draw_text_source_view_cursor.
     def draw_text_source_view_cursor(self, cr, rect):
@@ -519,7 +522,9 @@ class CodeEdit(gtk.ScrolledWindow):
             self.read_file(file_path)
         else:
             self.perror_input("Read File Error!!......")
-    
+            self.text_buffer_list = [""]
+            self.current_row = 1
+            
     def read_file(self, file_path):
         self.file_path = file_path                                        
         with open(self.file_path, "r") as f:
@@ -734,7 +739,7 @@ if __name__ == "__main__":
     win.set_size_request(500, 500)
     win.connect("destroy", gtk.main_quit)
     code_edit = CodeEdit()
-    code_edit.read("/home/long/123.txt")
+    code_edit.read("/home/long/123.cpp")
     # code_edit.read("/home/long/123.py")
     win.add(code_edit)
     win.show_all()

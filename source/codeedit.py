@@ -201,7 +201,7 @@ class CodeEdit(gtk.ScrolledWindow):
         padding_x = root_x + self.row_border_width + self.code_folding_width + self.cursor_padding_x
         padding_y = root_y + (self.cursor_row) * self.row_font_height + padding_height
         
-        self.code_hints_window.move_window(
+        self.code_hints_window.move(
             padding_x,
             padding_y
             )    
@@ -490,7 +490,7 @@ class CodeEdit(gtk.ScrolledWindow):
     
     # text_source_view_get_text_view_focus_out.        
     def text_source_view_get_text_view_focus_out(self, widget, event):
-        self.im.focus_out()        
+        self.im.focus_out()
     
     def text_source_view_get_text_view_focus_in(self, widget, event):
         self.im.set_client_window(widget.window)        

@@ -128,8 +128,10 @@ class CodeEdit(gtk.ScrolledWindow):
             "F11":self.full_window,
             "Return":self.Enter,
             "Ctrl + l":self.Smart_Enter,
+            "Ctrl + m":self.test_show_code,
             "BackSpace":self.Delete_Ch
             }
+                
         ########################################
         ### text_source_view.
         '''Init text_source_view.'''
@@ -139,7 +141,7 @@ class CodeEdit(gtk.ScrolledWindow):
         self.text_source_view.grab_focus()        
         '''Init text_source_view event.'''
         self.text_source_view.add_events(gtk.gdk.ALL_EVENTS_MASK)
-        self.text_source_view.connect("expose-event",          self.expose_draw_text_source_view)                
+        self.text_source_view.connect("expose-event",          self.expose_draw_text_source_view)
         self.text_source_view.connect("button-press-event",    self.button_press_event)
         self.text_source_view.connect("button-release-event",  self.button_release_event)
         self.text_source_view.connect("key-press-event",       self.key_press_event)        
@@ -164,6 +166,13 @@ class CodeEdit(gtk.ScrolledWindow):
         print module
         getattr(module, "devhelp")(self)
         
+        self.code_hints_win = CodeHintsWindow()
+        
+    def test_show_code(self):    
+        self.code_hints_win.show_all()
+        self.code_hints_win.set_size_request(100, 100)
+        # self.text_source_view.grab_focus()
+
     #############################    
     ### im input position.
     def set_im_position(self, x1, y2):    
@@ -1360,6 +1369,10 @@ class Table(object):
         self.token_column  = 0
     
 
+        
+        
+        
+        
 if __name__ == "__main__":        
     class Test(object):
         def __init__(self):
@@ -1367,7 +1380,7 @@ if __name__ == "__main__":
             self.win.set_size_request(500, 500)
             self.win.connect("destroy", gtk.main_quit)
             self.code_edit = CodeEdit()
-            self.code_edit.read("/home/long/123.txt")
+            # self.code_edit.read("/home/long/123.txt")
             # self.code_edit.read("/home/long/123.py")
             # self.hbox = gtk.VBox()
             # self.hbox.pack_start(CodeEdit())

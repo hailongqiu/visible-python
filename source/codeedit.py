@@ -27,6 +27,7 @@ import cairo
 import pango
 import pangocairo
 
+from codehintswindow import CodeHintsWindow
 from ini   import Config
 from regex import Scan
 
@@ -45,17 +46,17 @@ class CodeEdit(gtk.ScrolledWindow):
         self.init_immultiontext()    # init immultiontext.
         self.init_text_source_view() # init text source view.
         self.init_scroll_window_connect() 
+        self.init_code_hints_window()
         self.init_keymap() # init keymap.
         
         # scrolled window add text source view.
         self.add_with_viewport(self.text_source_view)
         gtk.timeout_add(888, self.show_and_hide_cursor)
         
-    def show_and_hide_cursor(self):    
+    def show_and_hide_cursor(self):
         if self.cursor_time_bool:
             self.cursor_show_bool = not self.cursor_show_bool
             self.row_ch_queue_draw_area("|")
-            
         return self.cursor_time_bool
     
     ###########################################################    
@@ -102,7 +103,7 @@ class CodeEdit(gtk.ScrolledWindow):
         self.select_row_color = "#4169E1"
         self.select_row_alpha   = 0.1
         self.scan_file_ini = "language/python.ini"
-        
+        self.notes_symbol = "#"
         
     def init_language_config(self, config_path="language/python.ini"):
         self.language_config = Config(config_path)
@@ -110,10 +111,10 @@ class CodeEdit(gtk.ScrolledWindow):
     def init_code_edit_config(self, config_path=".config/visual_python/code_edit.ini"):
         self.code_edit_config = Config(config_path)
         
-    def init_font(self, font_type="文泉驿等宽微米黑", font_size=11):                    
+    def init_font(self, font_type="文泉驿等宽微米黑", font_size=11):
         '''Init font type/size.'''
-        self.font_type  = "文泉驿等宽微米黑"
-        self.font_size  = 11
+        self.font_type  = font_type
+        self.font_size  = font_size
         self.column_font_width = self.get_ch_size(" ")[0]
         self.row_font_height = self.get_ch_size(" ")[1]
         
@@ -185,10 +186,26 @@ class CodeEdit(gtk.ScrolledWindow):
             "Ctrl + e":self.cursor_row_end,
             "Ctrl + s":self.save,
             "Ctrl + :":self.cursor_start_insert_ch,
+            "Ctrl + m":self.test_show_window,
             ###############################
             "F11":self.key_full_window
             }
         
+    def init_code_hints_window(self):    
+        self.code_hints_window = CodeHintsWindow()
+        
+    def test_show_window(self):
+        self.code_hints_window.show_all()
+        root_x, root_y = self.get_toplevel().window.get_root_origin()
+        padding_height = 29
+        padding_x = root_x + self.row_border_width + self.code_folding_width + self.cursor_padding_x
+        padding_y = root_y + (self.cursor_row) * self.row_font_height + padding_height
+        
+        self.code_hints_window.move_window(
+            padding_x,
+            padding_y
+            )    
+    
     ############################################################    
     ### scrolled window connect.
     def scrolled_window_hadjustment_value_changed(self, hadjustment):
@@ -340,7 +357,7 @@ class CodeEdit(gtk.ScrolledWindow):
         paernt_rect = self.allocation        
         self.draw_alpha_rectangle(
             cr,
-            rect.x,
+            rect.x + self.row_border_width + self.code_folding_width,
             rect.y + (self.cursor_row - 1) * self.row_font_height,
             paernt_rect.width,
             self.row_font_height,
@@ -368,12 +385,13 @@ class CodeEdit(gtk.ScrolledWindow):
 
         
     def draw_text_source_view_code_folding(self, cr, rect, offset_x):
+        start_index = self.get_scrolled_window_height()[0]
         code_folding_x = rect.x + self.row_border_width
         # draw text source code folding background.
         self.draw_alpha_rectangle(
             cr,
             offset_x +  code_folding_x,
-            rect.y,
+            rect.y + (start_index * self.row_font_height),
             self.code_folding_width,
             rect.y + rect.height,
             self.code_folding_bg_color,
@@ -384,7 +402,7 @@ class CodeEdit(gtk.ScrolledWindow):
         self.draw_alpha_rectangle(
             cr,
             offset_x + code_folding_x + int(self.code_folding_width/2),
-            rect.y,
+            rect.y + (start_index * self.row_font_height),
             1,
             rect.y + self.code_folding_height,
             self.code_folding_line_color,
@@ -602,11 +620,15 @@ class CodeEdit(gtk.ScrolledWindow):
         self.cursor_start_insert_ch_function()
     
     def cursor_start_insert_ch_function(self):    
-        if self.text_buffer_list[self.cursor_row - 1] != "":
-            if self.text_buffer_list[self.cursor_row - 1][0] != '#':
-                self.text_buffer_list[self.cursor_row-1] = self.cursor_row_insert_text(0, "#")
+        if self.text_buffer_list[self.cursor_row - 1] != "":            
+            if self.text_buffer_list[self.cursor_row - 1][0] != self.notes_symbol:
+                self.text_buffer_list[self.cursor_row-1] = self.cursor_row_insert_text(0, self.notes_symbol)
+                self.cursor_padding_x += self.get_ch_size(self.notes_symbol)[0]
+                self.cursor_column += 1
             else:
                 self.text_buffer_list[self.cursor_row-1] = self.text_buffer_list[self.cursor_row-1][1:]            
+                self.cursor_padding_x = max(self.cursor_padding_x - self.get_ch_size(self.notes_symbol)[0], 0)
+                self.cursor_column = max(self.cursor_column - 1, 0)
             self.row_line_queue_draw_area()
         
     ############################################################
@@ -642,7 +664,7 @@ class CodeEdit(gtk.ScrolledWindow):
         # get text_buffer_list max colume.
         for row in xrange(0, sum_row-1):
             if len(temp_text_buffer_list[row]) > max_column:
-                max_column = len(temp_text_buffer_list[row])
+                max_column = len(temp_text_buffer_list[row])                
         # set size.
         text_source_view_padding_height = 580
         text_source_view_padding_width  = 580
@@ -651,7 +673,7 @@ class CodeEdit(gtk.ScrolledWindow):
             sum_row * self.row_font_height + text_source_view_padding_height
             ) 
         self.text_buffer_list = temp_text_buffer_list
-        self.current_row = sum_row - 1
+        self.current_row = max(sum_row - 1, 1)
         
         self.row_border_width += self.get_ch_size(str(self.current_row))[0]
         
@@ -659,13 +681,16 @@ class CodeEdit(gtk.ScrolledWindow):
         self.save_file(self.file_path)
         
     def save_file(self, file_path):    
-        # fp = open(file_path, "w")
-        # fp.close()
-        pass
+        fp = open(file_path, "w")
+        fp.write(self.buffer_to_text())
+        fp.close()
     
     ############################################################    
     '''Tool function.'''
     ###
+    def buffer_to_text(self):
+        return '\n'.join(self.text_buffer_list)
+        
     def perror_input(self, text):
         print text
         
@@ -844,12 +869,16 @@ class CodeEdit(gtk.ScrolledWindow):
         return start_string, end_string
             
     def cursor_row_insert_text(self, column, text):
+        print column,text
         # self.text_buffer_list[self.cursor_row]
         start_text, end_text = self.start_to_end_string(
             self.cursor_row,
             0, column,
-            column, len(self.text_buffer_list[self.cursor_row])
+            column, len(self.text_buffer_list[self.cursor_row - 1])
             )
+        print "start:", start_text
+        print "end:", end_text
+        
         return start_text + text + end_text
         
 ##########################################        

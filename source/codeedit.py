@@ -31,6 +31,10 @@ from codehintswindow import CodeHintsWindow
 from ini   import Config
 from regex import Scan
 
+SELECT_MOVE_COPY_STATE_MID   = 0
+SELECT_MOVE_COPY_STATE_LEFT  = 1
+SELECT_MOVE_COPY_STATE_RIGHT = 2
+
 class CodeEdit(gtk.ScrolledWindow):
     def __init__(self):
         gtk.ScrolledWindow.__init__(self)         
@@ -39,6 +43,7 @@ class CodeEdit(gtk.ScrolledWindow):
         self.init_code_folding()
         self.init_border_row_number()
         self.init_cursor()
+        self.init_select_value()
         self.init_text_buffer_value()
         self.init_language_config()  # init language config.
         self.init_code_edit_config() # init code edit config.
@@ -67,7 +72,7 @@ class CodeEdit(gtk.ScrolledWindow):
         self.code_line_alpha = 0.1
 
     def init_row_border(self):    
-        self.row_border_color = "#F5F5F5"
+        self.row_border_color = "#F5F5F5" #ADD8E6
         self.row_border_width = 45
         
     def init_code_folding(self):    
@@ -90,6 +95,18 @@ class CodeEdit(gtk.ScrolledWindow):
         self.cursor_width = 1
         self.cursor_padding_x = 0
         self.cursor_time_bool = False
+        
+    def init_select_value(self):    
+        self.select_start_to_end_state = SELECT_MOVE_COPY_STATE_MID
+        self.select_copy_bool = False        
+        self.select_start_to_end_color = "#000000"
+        self.select_start_to_end_alpha = 0.5
+        self.start_select_padding_x = 0
+        self.end_select_padding_x   = 0
+        self.start_select_row    = 0
+        self.end_select_row      = 0
+        self.start_select_column = 0
+        self.end_select_column   = 0        
         
     def init_text_buffer_value(self):    
         self.text_buffer_list = [""]
@@ -151,7 +168,9 @@ class CodeEdit(gtk.ScrolledWindow):
         self.text_source_view.connect("expose-event",          
                                       self.text_source_view_expose_event)
         self.text_source_view.connect("button-press-event",    
-                                      self.text_source_view_button_press_event)
+                                      self.text_source_view_button_press_event)        
+        self.text_source_view.connect("motion-notify-event", 
+                                      self.text_source_view_motion_notify_event)        
         self.text_source_view.connect("button-release-event",  
                                       self.text_source_view_button_release_event)
         self.text_source_view.connect("key-press-event",       
@@ -160,8 +179,6 @@ class CodeEdit(gtk.ScrolledWindow):
                                       self.text_source_view_get_text_view_focus_out)
         self.text_source_view.connect("focus-in-event",        
                                       self.text_source_view_get_text_view_focus_in)
-        self.text_source_view.connect("motion-notify-event", 
-                                      self.text_source_view_motion_notify_event)
         
     def init_scroll_window_connect(self):    
         self.add_events(gtk.gdk.ALL_EVENTS_MASK)
@@ -467,10 +484,78 @@ class CodeEdit(gtk.ScrolledWindow):
                 self.cursor_row = move_row            
                 self.cursor_padding_x = token_all_width
                 self.cursor_show_bool = True
-                self.scrolled_window_queue_draw_area()        
+                self.scrolled_window_queue_draw_area()                            
                 
+                
+        self.select_init()        
+        
+    def select_init(self):    
+        self.select_copy_bool = True
+        temp_text = self.text_buffer_list[self.cursor_row - 1][:self.cursor_column]
+        self.start_select_padding_x = self.get_ch_size(temp_text)[0]
+        self.start_select_row    = self.cursor_row
+        self.start_select_column = self.cursor_column
+        
+    # text_source_view_motion_notify_event.    
+    def text_source_view_motion_notify_event(self, widget, event):
+        if self.select_copy_bool:
+            move_row = int(event.y / self.row_font_height) + 1
+            move_padding_x = int(event.x)
+                
+            self.select_draw_function(move_row)
+            self.cursor_padding_x = self.select_motion_postion_function(move_padding_x)
+            print "cursor_row:",   self.cursor_row
+            print "cusor_column:", self.cursor_column
+            print "cursor_padding_x:", self.cursor_padding_x        
+            print "start_row:", self.start_select_row
+            print "end_row:", self.end_select_row
+            print "start_select_padding_x:", self.start_select_padding_x
+            print "end_select_padding_x:", self.end_select_padding_x            
+            self.scrolled_window_queue_draw_area()
+            
+    def select_motion_postion_function(self, move_padding_x):
+        token_all_width = 0
+        self.cursor_column = 0
+        rect = self.allocation
+        temp_padding_x = self.row_border_width + self.code_folding_width
+        if move_padding_x < temp_padding_x:            
+            return token_all_width
+
+        for ch in self.text_buffer_list[self.cursor_row - 1]:
+            ch_width = self.get_ch_size(ch)[0]
+            max_padding_x = (rect.x + temp_padding_x + token_all_width + ch_width)
+            min_padding_x = (rect.x + temp_padding_x + token_all_width)
+            if  min_padding_x <= (move_padding_x) <= max_padding_x:
+                break
+            else:
+                self.cursor_column += 1
+                token_all_width += ch_width                
+                
+        return token_all_width
+        
+        
+    def select_draw_function(self, move_row):
+        max_row =  self.get_scrolled_window_height()[2]
+        # get select end row.
+        self.end_select_row = min(min(move_row, max_row), self.current_row)
+            
+        if self.start_select_row == self.end_select_row:
+            self.select_start_to_end_state = SELECT_MOVE_COPY_STATE_MID
+        elif self.start_select_row > self.end_select_row:    
+            self.select_start_to_end_state = SELECT_MOVE_COPY_STATE_LEFT
+        elif self.start_select_row < self.end_select_row:    
+            self.select_start_to_end_state = SELECT_MOVE_COPY_STATE_RIGHT
+                
+        temp_text = self.text_buffer_list[self.cursor_row - 1][:self.cursor_column]
+        self.end_select_padding_x = self.get_ch_size(temp_text)[0]
+            
+        # Set cursor row.
+        self.cursor_row = max(self.end_select_row, 1)
+        # Set draw select flags.
+        self.select_copy_draw_bool = True            
+            
     def text_source_view_button_release_event(self, widget, event):
-        pass
+        self.select_copy_bool = False
     
     # text_source_view_key_press_event.
     def text_source_view_key_press_event(self, widget, event):
@@ -495,10 +580,7 @@ class CodeEdit(gtk.ScrolledWindow):
     def text_source_view_get_text_view_focus_in(self, widget, event):
         self.im.set_client_window(widget.window)        
         self.im.focus_in()       
-    
-    # text_source_view_motion_notify_event.    
-    def text_source_view_motion_notify_event(self, widget, event):
-        pass
+        
     ############################################################
     '''key map'''
     ###

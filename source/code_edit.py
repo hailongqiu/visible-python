@@ -166,7 +166,7 @@ class CodeEdit(gtk.ScrolledWindow):
         print module
         getattr(module, "devhelp")(self)
         
-        self.code_hints_win = CodeHintsWindow()
+        # self.code_hints_win = CodeHintsWindow()
         
     def test_show_code(self):    
         self.code_hints_win.show_all()

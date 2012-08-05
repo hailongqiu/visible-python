@@ -31,6 +31,10 @@ from codehintswindow import CodeHintsWindow
 from ini   import Config
 from regex import Scan
 
+INIT_CONFIG_PATH = ".config/visual_python/code_edit.ini"
+INIT_FONT_TYPE = "文泉驿等宽微米黑"
+INIT_FONT_SIZE = 11
+
 SELECT_MOVE_COPY_STATE_MID   = 0
 SELECT_MOVE_COPY_STATE_LEFT  = 1
 SELECT_MOVE_COPY_STATE_RIGHT = 2
@@ -99,6 +103,7 @@ class CodeEdit(gtk.ScrolledWindow):
     def init_select_value(self):    
         self.select_start_to_end_state = SELECT_MOVE_COPY_STATE_MID
         self.select_copy_bool = False        
+        self.select_copy_draw_bool = False
         self.select_start_to_end_color = "#000000"
         self.select_start_to_end_alpha = 0.5
         self.start_select_padding_x = 0
@@ -125,10 +130,10 @@ class CodeEdit(gtk.ScrolledWindow):
     def init_language_config(self, config_path="language/python.ini"):
         self.language_config = Config(config_path)
         
-    def init_code_edit_config(self, config_path=".config/visual_python/code_edit.ini"):
+    def init_code_edit_config(self, config_path=INIT_CONFIG_PATH):
         self.code_edit_config = Config(config_path)
         
-    def init_font(self, font_type="文泉驿等宽微米黑", font_size=11):
+    def init_font(self, font_type=INIT_FONT_TYPE, font_size=INIT_FONT_SIZE):
         '''Init font type/size.'''
         self.font_type  = font_type
         self.font_size  = font_size
@@ -248,6 +253,8 @@ class CodeEdit(gtk.ScrolledWindow):
         self.draw_text_source_view_buffer_text(cr, rect)
         # Draw select row color.
         self.draw_text_source_view_select_row(cr, rect)
+        # Draw select start to end row text color.
+        self.draw_text_source_view_select_start_to_end_row(cr, rect)
         # Draw cursor.
         self.draw_text_source_view_cursor(cr, rect) 
         # Draw border.
@@ -370,7 +377,7 @@ class CodeEdit(gtk.ScrolledWindow):
                 )
             
     # draw_text_source_view_select_row        
-    def draw_text_source_view_select_row(self, cr, rect):        #123456
+    def draw_text_source_view_select_row(self, cr, rect):
         paernt_rect = self.allocation        
         self.draw_alpha_rectangle(
             cr,
@@ -381,6 +388,88 @@ class CodeEdit(gtk.ScrolledWindow):
             self.select_row_color,
             self.select_row_alpha
             )
+        
+    # draw_text_source_view_select_start_to_end_row    
+    def draw_text_source_view_select_start_to_end_row(self, cr, rect):    # 123456
+        if self.select_copy_draw_bool:
+            start_select_row = self.start_select_row
+            end_select_row   = self.end_select_row
+            start_select_padding_width = self.start_select_padding_x
+            end_select_padding_width = self.end_select_padding_x
+            text_view_padding_width = self.row_border_width + self.code_folding_width
+            start_padding_x = text_view_padding_width
+            end_padding_x = text_view_padding_width
+            paernt_rect = self.allocation
+            ###################
+            if self.select_start_to_end_state == SELECT_MOVE_COPY_STATE_MID:
+                if end_select_padding_width < start_select_padding_width: # sawp start and end.
+                    start_select_padding_width, end_select_padding_width = (end_select_padding_width, start_select_padding_width)
+                start_padding_x += start_select_padding_width
+                start_select_padding_width = end_select_padding_width - start_select_padding_width
+            elif self.select_start_to_end_state == SELECT_MOVE_COPY_STATE_LEFT:
+                # swap start and end row.
+                start_select_row, end_select_row = (end_select_row, start_select_row)
+                # swap start and end width.                
+                start_select_padding_width, end_select_padding_width = (end_select_padding_width, start_select_padding_width)
+                # sawp start and end padding x.
+                start_padding_x, end_padding_x = (end_padding_x, start_padding_x)
+                # set value.
+                start_padding_x += start_select_padding_width
+                temp_text = self.text_buffer_list[self.start_select_row - 1]
+                start_select_padding_width = self.get_ch_size(temp_text)[0] - start_select_padding_width
+                start_select_padding_width = paernt_rect.width
+            elif self.select_start_to_end_state == SELECT_MOVE_COPY_STATE_RIGHT:
+                start_padding_x += start_select_padding_width
+                temp_text = self.text_buffer_list[self.start_select_row - 1]
+                start_select_padding_width = self.get_ch_size(temp_text)[0] - start_select_padding_width
+                row_text_sum = len(self.text_buffer_list[self.start_select_row - 1])
+                if (not row_text_sum) or (row_text_sum == self.start_select_column):
+                    start_select_padding_width = paernt_rect.width
+            ######################    
+            self.draw_select_start_to_end_row_border_color(
+                cr, rect,
+                start_select_row, end_select_row,
+                start_select_padding_width, end_select_padding_width,
+                start_padding_x, end_padding_x
+                )                                    
+        
+    def draw_select_start_to_end_row_border_color(self, cr, rect, 
+                                                  start_row, end_row,
+                                                  start_padding_width, end_padding_width,
+                                                  start_padding_x, end_padding_x,
+                                                  ):
+        paernt_rect = self.allocation
+        for row in range(start_row, end_row + 1):                        
+            if row == start_row: # draw first row border.
+                self.draw_alpha_rectangle(
+                    cr,
+                    rect.x + start_padding_x,
+                    rect.y + (row - 1) * self.row_font_height,
+                    start_padding_width,
+                    self.row_font_height,
+                    self.select_start_to_end_color,
+                    self.select_start_to_end_alpha
+                    )                
+            elif row == end_row: # draw last row border.
+                self.draw_alpha_rectangle(
+                    cr,
+                    rect.x + end_padding_x,
+                    rect.y + (row - 1) * self.row_font_height,
+                    end_padding_width,
+                    self.row_font_height,
+                    self.select_start_to_end_color,
+                    self.select_start_to_end_alpha
+                    )                
+            else: # draw other row border.
+                self.draw_alpha_rectangle(
+                    cr,
+                    rect.x + self.row_border_width + self.code_folding_width,
+                    rect.y + (row - 1) * self.row_font_height,
+                    paernt_rect.width,
+                    self.row_font_height,
+                    self.select_start_to_end_color,
+                    self.select_start_to_end_alpha
+                    )
         
     # draw_text_source_view_border.        
     def draw_text_source_view_border(self, widget, cr, rect):
@@ -502,15 +591,22 @@ class CodeEdit(gtk.ScrolledWindow):
             move_row = int(event.y / self.row_font_height) + 1
             move_padding_x = int(event.x)
                 
-            self.select_draw_function(move_row)
+            
             self.cursor_padding_x = self.select_motion_postion_function(move_padding_x)
+            self.select_draw_function(max(move_row, 1))
+            print "===================================="
             print "cursor_row:",   self.cursor_row
             print "cusor_column:", self.cursor_column
             print "cursor_padding_x:", self.cursor_padding_x        
             print "start_row:", self.start_select_row
             print "end_row:", self.end_select_row
+            print "start_column:", self.start_select_column
+            print "end_column:", self.end_select_column
             print "start_select_padding_x:", self.start_select_padding_x
-            print "end_select_padding_x:", self.end_select_padding_x            
+            print "end_select_padding_x:", self.end_select_padding_x                        
+            print "state:", self.select_start_to_end_state
+            print "====================================@@"
+            
             self.scrolled_window_queue_draw_area()
             
     def select_motion_postion_function(self, move_padding_x):
@@ -518,9 +614,9 @@ class CodeEdit(gtk.ScrolledWindow):
         self.cursor_column = 0
         rect = self.allocation
         temp_padding_x = self.row_border_width + self.code_folding_width
-        if move_padding_x < temp_padding_x:            
+        if move_padding_x < temp_padding_x:
             return token_all_width
-
+        
         for ch in self.text_buffer_list[self.cursor_row - 1]:
             ch_width = self.get_ch_size(ch)[0]
             max_padding_x = (rect.x + temp_padding_x + token_all_width + ch_width)
@@ -530,7 +626,7 @@ class CodeEdit(gtk.ScrolledWindow):
             else:
                 self.cursor_column += 1
                 token_all_width += ch_width                
-                
+        self.end_select_column = self.cursor_column
         return token_all_width
         
         
@@ -959,8 +1055,7 @@ class CodeEdit(gtk.ScrolledWindow):
             column, len(self.text_buffer_list[self.cursor_row - 1])
             )
         print "start:", start_text
-        print "end:", end_text
-        
+        print "end:", end_text        
         return start_text + text + end_text
         
 ##########################################        

@@ -647,7 +647,7 @@ class CodeEdit(gtk.ScrolledWindow):
             if self.cursor_row >= self.get_expose_start_and_end_row()[2] - temp_padding_row:
                 temp_value = self.cursor_row - self.get_expose_start_and_end_row()[2] + temp_padding_row
                 self.get_vadjustment().set_value(self.get_vadjustment().get_value() + temp_value * self.code_font_height)
-            elif self.cursor_row < self.get_expose_start_and_end_row()[0]:     
+            elif self.cursor_row < self.get_expose_start_and_end_row()[0]:
                 # temp_padding_value = 2
                 '''(start_position_row + end_position_row) - cursor_row'''
                 temp_value = self.get_expose_start_and_end_row()[2] -  self.cursor_row - temp_padding_row

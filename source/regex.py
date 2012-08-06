@@ -520,18 +520,18 @@ class Stack(object):
         self.__index += 1
     
 if __name__ == "__main__":
-    scan = Scan("language/python.ini")
-    print scan.scan("f", 10)
-
-#     # start_index, end_index = Regex("I love c and linux", "0-9").start_regex()
-#     # print "start_index:", start_index, "end_index:", end_index
-#     temp_stack = Stack()
-#     temp_stack.push('a')
-#     temp_stack.push('b')
-#     temp_stack.push('c')
-#     print temp_stack.pop()
-#     print temp_stack.pop()
-#     print temp_stack.pop()
+    # scan = Scan("language/python.ini")
+    # print scan.scan("f", 10)
+    
+    #     # start_index, end_index = Regex("I love c and linux", "0-9").start_regex()
+    #     # print "start_index:", start_index, "end_index:", end_index
+    temp_stack = Stack()
+    temp_stack.push('3')
+    temp_stack.push('+')
+    temp_stack.push('4')
+    print temp_stack.pop()
+    print temp_stack.pop()
+    print temp_stack.pop()
     
     
     

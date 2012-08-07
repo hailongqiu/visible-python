@@ -291,7 +291,6 @@ class CodeEdit(gtk.ScrolledWindow):
     # draw_text_source_view_buffer_text.
     def draw_text_source_view_buffer_text(self, cr, rect):
         start_row, end_row, sum_row = self.get_scrolled_window_height()
-        # start_column, end_column, sum_column = 0, 0, len(self.text_buffer_list[self.cursor_row-1])
         start_column, end_column, sum_column = self.get_scrolled_window_width()
         temp_row = 0
         for text in self.get_buffer_row_start_to_end_text(start_row, sum_row):
@@ -569,7 +568,6 @@ class CodeEdit(gtk.ScrolledWindow):
         move_row = int(event.y / self.row_font_height) + 1
         min_row = self.get_scrolled_window_height()[0]
         max_row = self.get_scrolled_window_height()[2]
-                                
         if min_row < move_row <= max_row:
             if 1 <= move_row <= self.current_row:
                 token_all_width = self.get_press_cursor_position(widget, event, move_row - 1)
@@ -724,7 +722,7 @@ class CodeEdit(gtk.ScrolledWindow):
         temp_insert_text = self.text_buffer_list[self.cursor_row - 1][self.cursor_column:] 
         self.text_buffer_list[self.cursor_row - 1] = temp_text_buffer
         self.text_buffer_list.insert(self.cursor_row, temp_insert_text)
-        self.text_buffer_list.insert(self.cursor_row, "")
+        # self.text_buffer_list.insert(self.cursor_row, "")
         self.key_enter_init()
         self.cursor_down_vadjustment_set_value()
         # Set enter last height.
@@ -937,21 +935,30 @@ class CodeEdit(gtk.ScrolledWindow):
         '''Get column of scrolled window current width.'''
         start_position_column = 0
         temp_all_ch_width = 0
-        for ch in self.text_buffer_list[self.cursor_row - 1]:
-            ch_width = self.get_ch_size(ch)[0]
-            if self.get_hadjustment().get_value() <= temp_all_ch_width:
-                break            
-            else:
-                temp_all_ch_width += ch_width
-                start_position_column += 1
-                
-        end_position_column = 0
-        temp_all_ch_width = 0      
-        
-        start_to_end_column = 100
-        
-        return start_position_column, end_position_column, start_to_end_column
+        # get start position column.
+        if self.get_hadjustment().get_value() >= 1:
+            for ch in self.text_buffer_list[self.cursor_row - 1]:
+                ch_width = self.get_ch_size(ch)[0]
+                temp_width = self.get_hadjustment().get_value() + ch_width
+                if temp_width < temp_all_ch_width:
+                    break
+                else:
+                    temp_all_ch_width += ch_width
+                    start_position_column += 1    
                     
+        # get end position column.            
+        end_position_column = self.get_scrolled_window_end_column(start_position_column)
+        start_to_end_column = start_position_column + end_position_column                
+        print "start_position_column:", start_position_column
+        print "end_position_column:",   end_position_column
+        return start_position_column, end_position_column, start_to_end_column
+    
+    def get_scrolled_window_end_column(self, start_position_column): # 123456c
+        end_position_column = 100
+        temp_all_ch_width = 0
+        
+        return end_position_column 
+    
     def scrolled_window_queue_draw_area(self):            
         widget = self.text_source_view
         rect = self.text_source_view.allocation

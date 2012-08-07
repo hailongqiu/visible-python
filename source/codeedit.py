@@ -252,7 +252,7 @@ class CodeEdit(gtk.ScrolledWindow):
         # Draw buffer text.
         self.draw_text_source_view_buffer_text(cr, rect)
         # Draw select row color.
-        self.draw_text_source_view_select_row(cr, rect)
+        self.draw_text_source_view_select_row(widget, cr, rect)
         # Draw select start to end row text color.
         self.draw_text_source_view_select_start_to_end_row(cr, rect)
         # Draw cursor.
@@ -379,11 +379,12 @@ class CodeEdit(gtk.ScrolledWindow):
                 )
             
     # draw_text_source_view_select_row        
-    def draw_text_source_view_select_row(self, cr, rect):
+    def draw_text_source_view_select_row(self, widget, cr, rect):
         paernt_rect = self.allocation        
+        offset_x, offset_y = self.get_coordinates(widget, rect.x, rect.y)
         self.draw_alpha_rectangle(
             cr,
-            rect.x + self.row_border_width + self.code_folding_width,
+            -offset_x + rect.x + self.row_border_width + self.code_folding_width,
             rect.y + (self.cursor_row - 1) * self.row_font_height,
             paernt_rect.width,
             self.row_font_height,
@@ -952,14 +953,16 @@ class CodeEdit(gtk.ScrolledWindow):
         return start_position_column, end_position_column, start_to_end_column
                     
     def scrolled_window_queue_draw_area(self):            
-        rect = self.allocation
+        widget = self.text_source_view
+        rect = self.text_source_view.allocation
+        offset_x, offset_y = self.get_coordinates(widget, rect.x, rect.y)
         self.text_source_view.queue_draw_area(
-            rect.x,
+            -offset_x + rect.x,
             rect.y,
             rect.width,
             rect.height
             )
-        self.queue_draw()
+        # self.queue_draw()
             
     def row_line_queue_draw_area(self):    
         rect = self.allocation

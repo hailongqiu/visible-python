@@ -220,7 +220,7 @@ class CodeEdit(gtk.ScrolledWindow):
         self.code_hints_window.show_all()
         root_x, root_y = self.get_toplevel().window.get_root_origin()
         padding_height = 31
-        padding_x = root_x + self.row_border_width + self.code_folding_width + self.cursor_padding_x - self.get_scrolled_window_width()[0]
+        padding_x = root_x + self.row_border_width + self.code_folding_width + self.cursor_padding_x - self.get_scrolled_window_width(self.cursor_row - 1)[0]
         padding_y = root_y + (self.cursor_row - self.get_scrolled_window_height()[0]) * self.row_font_height + padding_height
         
         self.code_hints_window.move(
@@ -290,21 +290,21 @@ class CodeEdit(gtk.ScrolledWindow):
         
     # draw_text_source_view_buffer_text.
     def draw_text_source_view_buffer_text(self, cr, rect):
-        start_row, end_row, sum_row = self.get_scrolled_window_height()
-        start_column, end_column, sum_column = self.get_scrolled_window_width()
+        start_row, end_row, sum_row = self.get_scrolled_window_height()        
         temp_row = 0
         for text in self.get_buffer_row_start_to_end_text(start_row, sum_row):
+            start_column, end_column, sum_column = self.get_scrolled_window_width(start_row + temp_row)
             all_ch_width = 0
             # get token color.
             if text:
                 temp_token_fg_color = {}
                 scan = Scan(self.scan_file_ini)
-                for table_color in scan.scan(text,  #self.get_buffer_column_start_to_end_text(text, start_column, sum_column)
+                for table_color in scan.scan(text[:sum_column],
                                    start_row + temp_row):
                     for column in range(table_color.start_index, 
                                         table_color.end_index+1):
-                        temp_token_fg_color[column] = table_color.rgb                        
-            temp_token_color_column = 0    
+                        temp_token_fg_color[column] = table_color.rgb
+            temp_token_color_column = start_column
                 
             for ch in self.get_buffer_column_start_to_end_text(text, start_column, sum_column):
                 temp_ch_width = self.get_ch_size(ch)[0]
@@ -319,13 +319,13 @@ class CodeEdit(gtk.ScrolledWindow):
                     fg_rgb = "#000000"
                 
                 # draw ch.
-                # x_padding = rect.x + self.get_hadjustment().get_value() + self.row_border_width + self.code_folding_width
                 x_padding = rect.x + self.row_border_width + self.code_folding_width
                 y_padding = rect.y + (start_row + temp_row) * self.row_font_height
+                temp_padding_width = self.get_ch_size(self.text_buffer_list[temp_row][:start_column])[0]
                 self.draw_text_source_view_buffer_text_ch(
                     ch,
                     cr, 
-                    x_padding + all_ch_width,
+                    x_padding + all_ch_width + temp_padding_width,
                     y_padding,
                     fg_rgb,
                     bg_rgb
@@ -354,9 +354,9 @@ class CodeEdit(gtk.ScrolledWindow):
         # Set font position.
         layout.set_text(ch)
         cr.move_to(offset_x, 
-                   offset_y)        
+                   offset_y)
         # Set font rgb.
-        cr.set_source_rgb(*self.color_to_rgb(fg_rgb))            
+        cr.set_source_rgb(*self.color_to_rgb(fg_rgb))
         # Show font.
         context.update_layout(layout)
         context.show_layout(layout)        
@@ -782,7 +782,7 @@ class CodeEdit(gtk.ScrolledWindow):
             token_all_width = self.get_ch_size(self.text_buffer_list[self.cursor_row - 1][:self.cursor_column])[0]
             self.cursor_padding_x = token_all_width
             self.row_line_queue_draw_area()
-            # print "width:", self.get_scrolled_window_width() # 123456a
+            
             self.cursor_right_vadjustment_set_value()
             
     def cursor_left(self):        
@@ -931,50 +931,77 @@ class CodeEdit(gtk.ScrolledWindow):
         start_to_end_row   = end_position_row + start_position_row
         return start_position_row, end_position_row, start_to_end_row
     
-    def get_scrolled_window_width(self): # 123456b
-        '''Get column of scrolled window current width.'''
-        start_position_column = 0
-        temp_all_ch_width = 0
+    # get_scrolled_window_width
+    def get_scrolled_window_width(self, row):
+        '''Get column of scrolled window current width.'''        
         # get start position column.
-        if self.get_hadjustment().get_value() >= 1:
-            for ch in self.text_buffer_list[self.cursor_row - 1]:
-                ch_width = self.get_ch_size(ch)[0]
-                temp_width = self.get_hadjustment().get_value() + ch_width
-                if temp_width < temp_all_ch_width:
-                    break
-                else:
-                    temp_all_ch_width += ch_width
-                    start_position_column += 1    
-                    
-        # get end position column.            
-        end_position_column = self.get_scrolled_window_end_column(start_position_column)
-        start_to_end_column = start_position_column + end_position_column                
+        start_position_column = self.get_scrolled_window_start_column(row)
+        # get end position column.
+        end_position_column = self.get_scrolled_window_end_column(row, start_position_column)
+        start_to_end_column = start_position_column + end_position_column
         print "start_position_column:", start_position_column
         print "end_position_column:",   end_position_column
         return start_position_column, end_position_column, start_to_end_column
     
-    def get_scrolled_window_end_column(self, start_position_column): # 123456c
-        end_position_column = 100
-        temp_all_ch_width = 0
-        
-        return end_position_column 
+    def get_scrolled_window_start_column(self, row):
+        start_position_column = 0
+        temp_all_ch_width = 0        
+        if self.get_hadjustment().get_value() >= 1:
+            temp_text = self.text_buffer_list[row]
+            for ch in temp_text:
+                ch_width = self.get_ch_size(ch)[0]
+                temp_width = self.get_hadjustment().get_value() - self.row_border_width - self.code_folding_width
+                if temp_width < temp_all_ch_width:
+                    break
+                else:
+                    temp_all_ch_width += ch_width
+                    start_position_column += 1
+        return start_position_column
     
+    def get_scrolled_window_end_column(self, row, start_position_column):
+        end_position_column = 0
+        scrolled_toolbar_width = 25
+        temp_all_ch_width = 0
+        # temp_text = self.text_buffer_list[self.cursor_row - 1][start_position_column:]
+        temp_text = self.text_buffer_list[row][start_position_column:]
+        temp_padding_width = self.allocation.width - self.row_border_width - self.code_folding_width - scrolled_toolbar_width
+        for ch in temp_text:
+            ch_width = self.get_ch_size(ch)[0]
+            temp_width = temp_padding_width
+            if temp_width <= temp_all_ch_width:
+                print "*************到了接觸到了..>>>>"
+                break
+            else:
+                temp_all_ch_width   += ch_width
+                end_position_column += 1
+        return end_position_column
+    
+    # scrolled_window_queue_draw_area
     def scrolled_window_queue_draw_area(self):            
-        widget = self.text_source_view
-        rect = self.text_source_view.allocation
-        offset_x, offset_y = self.get_coordinates(widget, rect.x, rect.y)
+        rect = self.allocation
+        offset_x = self.get_text_source_view_coordinates()[0]
+        start_row = self.get_scrolled_window_height()[0]
         self.text_source_view.queue_draw_area(
             -offset_x + rect.x,
-            rect.y,
+            rect.y + start_row * self.row_font_height,
             rect.width,
             rect.height
             )
-        # self.queue_draw()
-            
+        
+    def get_text_source_view_coordinates(self):    
+        widget = self.text_source_view
+        rect = self.text_source_view.allocation
+        offset_x, offset_y = self.get_coordinates(widget, rect.x, rect.y)
+        return (offset_x, offset_y)
+    
+    def get_coordinates(self, widget, x, y):
+        return widget.translate_coordinates(self, x, y)
+    
     def row_line_queue_draw_area(self):    
         rect = self.allocation
+        offset_x = self.get_text_source_view_coordinates()[0]
         self.text_source_view.queue_draw_area(
-            rect.x,
+            -offset_x + rect.x,
             rect.y + (self.cursor_row - 1) * self.row_font_height,
             rect.width,
             self.row_font_height
@@ -983,15 +1010,13 @@ class CodeEdit(gtk.ScrolledWindow):
         rect = self.allocation
         x_padding = rect.x + self.row_border_width + self.code_folding_width +  self.cursor_padding_x
         y_padding = rect.y + (self.cursor_row - 1) * self.row_font_height
+        offset_x = self.get_text_source_view_coordinates()[0]
         self.text_source_view.queue_draw_area(
-            x_padding,
+            -offset_x + x_padding,
             y_padding,
             self.get_ch_size(ch)[0],
             self.row_font_height
             )
-
-    def get_coordinates(self, widget, x, y):
-        return widget.translate_coordinates(self, x, y)
         
     def draw_rectangle(self, cr, x, y, w, h, rgb):
         cr.set_source_rgb(*self.color_to_rgb(rgb))

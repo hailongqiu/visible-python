@@ -305,7 +305,28 @@ class CodeEdit(gtk.ScrolledWindow):
                                         table_color.end_index+1):
                         temp_token_fg_color[column] = table_color.rgb
             temp_token_color_column = start_column
-                
+            # draw ch.
+            x_padding = rect.x + self.row_border_width + self.code_folding_width
+            y_padding = rect.y + (start_row + temp_row) * self.row_font_height
+            temp_padding_width = self.get_ch_size(self.text_buffer_list[temp_row][:start_column])[0]
+            ############################################
+            ## draw first ch.
+            try:    
+                first_fg_rgb = temp_token_fg_color[temp_token_color_column-1]
+            except:    
+                first_fg_rgb = "#000000"
+            if self.get_hadjustment().get_value() > 0:
+                # draw a ch.
+                temp_text = self.text_buffer_list[temp_row][start_column-1:start_column]
+                self.draw_text_source_view_buffer_text_ch(
+                    temp_text,
+                    cr,
+                    x_padding + self.get_ch_size(self.text_buffer_list[temp_row][:start_column-1])[0],
+                    y_padding,
+                    first_fg_rgb,
+                    None
+                    )
+            ############################################                 
             for ch in self.get_buffer_column_start_to_end_text(text, start_column, sum_column):
                 temp_ch_width = self.get_ch_size(ch)[0]
                 if all_ch_width == None:
@@ -317,11 +338,6 @@ class CodeEdit(gtk.ScrolledWindow):
                     fg_rgb = temp_token_fg_color[temp_token_color_column]
                 except:    
                     fg_rgb = "#000000"
-                
-                # draw ch.
-                x_padding = rect.x + self.row_border_width + self.code_folding_width
-                y_padding = rect.y + (start_row + temp_row) * self.row_font_height
-                temp_padding_width = self.get_ch_size(self.text_buffer_list[temp_row][:start_column])[0]
                 self.draw_text_source_view_buffer_text_ch(
                     ch,
                     cr, 
@@ -594,18 +610,18 @@ class CodeEdit(gtk.ScrolledWindow):
             
             self.cursor_padding_x = self.select_motion_postion_function(move_padding_x)
             self.select_draw_function(max(move_row, 1))
-            print "===================================="
-            print "cursor_row:",   self.cursor_row
-            print "cusor_column:", self.cursor_column
-            print "cursor_padding_x:", self.cursor_padding_x        
-            print "start_row:", self.start_select_row
-            print "end_row:", self.end_select_row
-            print "start_column:", self.start_select_column
-            print "end_column:", self.end_select_column
-            print "start_select_padding_x:", self.start_select_padding_x
-            print "end_select_padding_x:", self.end_select_padding_x                        
-            print "state:", self.select_start_to_end_state
-            print "====================================@@"
+            # print "===================================="
+            # print "cursor_row:",   self.cursor_row
+            # print "cusor_column:", self.cursor_column
+            # print "cursor_padding_x:", self.cursor_padding_x        
+            # print "start_row:", self.start_select_row
+            # print "end_row:", self.end_select_row
+            # print "start_column:", self.start_select_column
+            # print "end_column:", self.end_select_column
+            # print "start_select_padding_x:", self.start_select_padding_x
+            # print "end_select_padding_x:", self.end_select_padding_x                        
+            # print "state:", self.select_start_to_end_state
+            # print "====================================@@"
             
             self.scrolled_window_queue_draw_area()
             
@@ -933,14 +949,14 @@ class CodeEdit(gtk.ScrolledWindow):
     
     # get_scrolled_window_width
     def get_scrolled_window_width(self, row):
-        '''Get column of scrolled window current width.'''        
+        '''Get column of scrolled window current width.'''
         # get start position column.
         start_position_column = self.get_scrolled_window_start_column(row)
         # get end position column.
         end_position_column = self.get_scrolled_window_end_column(row, start_position_column)
         start_to_end_column = start_position_column + end_position_column
-        print "start_position_column:", start_position_column
-        print "end_position_column:",   end_position_column
+        # print "start_position_column:", start_position_column
+        # print "end_position_column:",   end_position_column
         return start_position_column, end_position_column, start_to_end_column
     
     def get_scrolled_window_start_column(self, row):
@@ -950,12 +966,15 @@ class CodeEdit(gtk.ScrolledWindow):
             temp_text = self.text_buffer_list[row]
             for ch in temp_text:
                 ch_width = self.get_ch_size(ch)[0]
-                temp_width = self.get_hadjustment().get_value() - self.row_border_width - self.code_folding_width
-                if temp_width < temp_all_ch_width:
+                # temp_width = self.get_hadjustment().get_value() - self.row_border_width - self.code_folding_width
+                temp_width = self.get_hadjustment().get_value()
+                if temp_width <= temp_all_ch_width:
                     break
                 else:
                     temp_all_ch_width += ch_width
                     start_position_column += 1
+            # print "temp_all_ch_width:", temp_all_ch_width
+            # print "temp...width > dfdf:", 
         return start_position_column
     
     def get_scrolled_window_end_column(self, row, start_position_column):
@@ -969,7 +988,7 @@ class CodeEdit(gtk.ScrolledWindow):
             ch_width = self.get_ch_size(ch)[0]
             temp_width = temp_padding_width
             if temp_width <= temp_all_ch_width:
-                print "*************到了接觸到了..>>>>"
+                # print "*************到了接觸到了..>>>>"
                 break
             else:
                 temp_all_ch_width   += ch_width
@@ -1111,15 +1130,15 @@ class CodeEdit(gtk.ScrolledWindow):
         return start_string, end_string
             
     def cursor_row_insert_text(self, column, text):
-        print column,text
+        # print column,text
         # self.text_buffer_list[self.cursor_row]
         start_text, end_text = self.start_to_end_string(
             self.cursor_row,
             0, column,
             column, len(self.text_buffer_list[self.cursor_row - 1])
             )
-        print "start:", start_text
-        print "end:", end_text        
+        # print "start:", start_text
+        # print "end:", end_text        
         return start_text + text + end_text
     
     def cursor_down_vadjustment_set_value(self):
@@ -1184,15 +1203,4 @@ if __name__ == "__main__":
     code_edit.read("/home/strom/123.py")
     win.add(code_edit)
     win.show_all()
-    gtk.main()
-    # test_text = "i love c and liux.....................................................................fjdsklfjsdklfjdsklfjsdklfjdsklfjdsklfjsdklfjsdklfjsdklfjsdklfjdskfljdskfjdslkfjsdklfjdsklfjdsfiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii"
-    # test_buffer = Buffers()
-    # test_buffer.save_temp_buffer(test_text)
-    # test_buffer.save_temp_buffer(test_text[:150])
-    # test_buffer.save_temp_buffer(test_text[:100])
-    # print test_buffer.pre()
-    # print test_buffer.pre()
-    # print test_buffer.pre()
-    # print test_buffer.pre()
-    # print test_buffer.next()
     gtk.main()

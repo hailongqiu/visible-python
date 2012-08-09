@@ -292,6 +292,8 @@ class CodeEdit(gtk.ScrolledWindow):
     def draw_text_source_view_buffer_text(self, cr, rect):
         start_row, end_row, sum_row = self.get_scrolled_window_height()
         temp_row = 0
+        # start_column, end_column, sum_column = self.get_scrolled_window_width(start_row + temp_row) 
+        
         for text in self.get_buffer_row_start_to_end_text(start_row, sum_row):
             start_column, end_column, sum_column = self.get_scrolled_window_width(start_row + temp_row)
             all_ch_width = 0
@@ -347,7 +349,7 @@ class CodeEdit(gtk.ScrolledWindow):
                     bg_rgb
                     )
                 # save ch width.
-                all_ch_width += temp_ch_width                
+                all_ch_width += temp_ch_width
                 temp_token_color_column += 1
             # test ...    
             # self.draw_text_source_view_buffer_text_ch(temp_column_text,
@@ -959,8 +961,10 @@ class CodeEdit(gtk.ScrolledWindow):
         '''Get column of scrolled window current width.'''
         # get start position column.
         start_position_column = self.get_scrolled_window_start_column(row)
+        # start_position_column = 0
         # get end position column.
         end_position_column = self.get_scrolled_window_end_column(row, start_position_column)
+        # end_position_column = int((self.allocation.width ) / self.column_font_width)
         start_to_end_column = start_position_column + end_position_column
         # print "start_position_column:", start_position_column
         # print "end_position_column:",   end_position_column
@@ -995,7 +999,7 @@ class CodeEdit(gtk.ScrolledWindow):
             ch_width = self.get_ch_size(ch)[0]
             temp_width = temp_padding_width
             if temp_width <= temp_all_ch_width:
-                # print "*************到了接觸到了..>>>>"
+                # print "get_scrolled_window_end_column...*************到了接觸到了..>>>>"
                 break
             else:
                 temp_all_ch_width   += ch_width
@@ -1004,6 +1008,7 @@ class CodeEdit(gtk.ScrolledWindow):
     
     # scrolled_window_queue_draw_area
     def scrolled_window_queue_draw_area(self):            
+        # print "scrolled_window_queue_draw_area...---->>>"
         rect = self.allocation
         offset_x = self.get_text_source_view_coordinates()[0]
         start_row = self.get_scrolled_window_height()[0]
@@ -1024,6 +1029,7 @@ class CodeEdit(gtk.ScrolledWindow):
         return widget.translate_coordinates(self, x, y)
     
     def row_line_queue_draw_area(self):    
+        # print "row_line_queue_draw_area-------->>>>"
         rect = self.allocation
         offset_x = self.get_text_source_view_coordinates()[0]
         self.text_source_view.queue_draw_area(
@@ -1032,7 +1038,9 @@ class CodeEdit(gtk.ScrolledWindow):
             rect.width,
             self.row_font_height
             )
+        
     def row_ch_queue_draw_area(self, ch):    
+        # print "row_ch_queue_draw_area--------->>>>"
         rect = self.allocation
         x_padding = rect.x + self.row_border_width + self.code_folding_width +  self.cursor_padding_x
         y_padding = rect.y + (self.cursor_row - 1) * self.row_font_height

@@ -290,7 +290,7 @@ class CodeEdit(gtk.ScrolledWindow):
         
     # draw_text_source_view_buffer_text.
     def draw_text_source_view_buffer_text(self, cr, rect):
-        start_row, end_row, sum_row = self.get_scrolled_window_height()        
+        start_row, end_row, sum_row = self.get_scrolled_window_height()
         temp_row = 0
         for text in self.get_buffer_row_start_to_end_text(start_row, sum_row):
             start_column, end_column, sum_column = self.get_scrolled_window_width(start_row + temp_row)
@@ -298,17 +298,18 @@ class CodeEdit(gtk.ScrolledWindow):
             # get token color.
             if text:
                 temp_token_fg_color = {}
-                scan = Scan(self.scan_file_ini)
-                for table_color in scan.scan(text[:sum_column],
-                                   start_row + temp_row):
-                    for column in range(table_color.start_index, 
-                                        table_color.end_index+1):
-                        temp_token_fg_color[column] = table_color.rgb
+                # scan = Scan(self.scan_file_ini)
+                # for table_color in scan.scan(text[:sum_column],
+                #                    start_row + temp_row):
+                #     for column in range(table_color.start_index, 
+                #                         table_color.end_index+1):
+                #         temp_token_fg_color[column] = table_color.rgb
             temp_token_color_column = start_column
             # draw ch.
             x_padding = rect.x + self.row_border_width + self.code_folding_width
             y_padding = rect.y + (start_row + temp_row) * self.row_font_height
             temp_padding_width = self.get_ch_size(self.text_buffer_list[temp_row][:start_column])[0]
+            temp_column_text = self.get_buffer_column_start_to_end_text(text, start_column, sum_column)
             ############################################
             ## draw first ch.
             try:    
@@ -327,30 +328,35 @@ class CodeEdit(gtk.ScrolledWindow):
                     None
                     )
             ############################################                 
-            for ch in self.get_buffer_column_start_to_end_text(text, start_column, sum_column):
-                temp_ch_width = self.get_ch_size(ch)[0]
-                if all_ch_width == None:
-                    bg_rgb = "#FF0000"
-                else:    
-                    bg_rgb = None           
+            # for ch in temp_column_text:
+            #     if all_ch_width == None:
+            #         bg_rgb = "#FF0000"
+            #     else:    
+            #         bg_rgb = None           
                     
-                try:    
-                    fg_rgb = temp_token_fg_color[temp_token_color_column]
-                except:    
-                    fg_rgb = "#000000"
-                self.draw_text_source_view_buffer_text_ch(
-                    ch,
-                    cr, 
-                    x_padding + all_ch_width + temp_padding_width,
-                    y_padding,
-                    fg_rgb,
-                    bg_rgb
-                    )
-                # save ch width.
-                all_ch_width += temp_ch_width
-                
-                temp_token_color_column += 1
-            temp_row += 1
+            #     try:    
+            #         fg_rgb = temp_token_fg_color[temp_token_color_column]
+            #     except:    
+            #         fg_rgb = "#000000"
+            #     temp_ch_width = self.draw_text_source_view_buffer_text_ch(
+            #         ch,
+            #         cr, 
+            #         x_padding + all_ch_width + temp_padding_width,
+            #         y_padding,
+            #         fg_rgb,
+            #         bg_rgb
+            #         )
+            #     # save ch width.
+            #     all_ch_width += temp_ch_width                
+            #     temp_token_color_column += 1
+            all_ch_width = self.get_ch_size(temp_column_text)[0]
+            self.draw_text_source_view_buffer_text_ch(temp_column_text,
+                                                      cr,
+                                                      x_padding + temp_padding_width,
+                                                      y_padding,
+                                                      "#000000",
+                                                      None)
+            temp_row += 1            
             
     def draw_text_source_view_buffer_text_ch(self, ch, cr, 
                                              offset_x, offset_y, 
@@ -358,25 +364,26 @@ class CodeEdit(gtk.ScrolledWindow):
                                              ):    
         context = pangocairo.CairoContext(cr)
         layout = context.create_layout()
-        layout.set_font_description(pango.FontDescription("%s %s" % (self.font_type, self.font_size))) 
-        ch_width, ch_height = self.get_ch_size(ch)
-        # set ch background color.
-        self.set_ch_background(
-            cr, 
-            offset_x, offset_y, 
-            ch_width, ch_height, 
-            self.ch_bg_alpha, bg_rgb
-            )
+        layout.set_font_description(pango.FontDescription("%s %s" % (self.font_type, self.font_size)))         
         # Set font position.
         layout.set_text(ch)
+        ch_width, ch_height = layout.get_pixel_size()
         cr.move_to(offset_x, 
                    offset_y)
+        # set ch background color.
+        # self.set_ch_background(
+        #     cr, 
+        #     offset_x, offset_y, 
+        #     ch_width, ch_height, 
+        #     self.ch_bg_alpha, bg_rgb
+        #     )        
         # Set font rgb.
         cr.set_source_rgb(*self.color_to_rgb(fg_rgb))
         # Show font.
         context.update_layout(layout)
-        context.show_layout(layout)        
-                
+        context.show_layout(layout)
+        return ch_width
+    
     def set_ch_background(self, cr, 
                           offset_x, offset_y, 
                           ch_width, ch_height, 

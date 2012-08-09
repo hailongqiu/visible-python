@@ -298,12 +298,12 @@ class CodeEdit(gtk.ScrolledWindow):
             # get token color.
             if text:
                 temp_token_fg_color = {}
-                # scan = Scan(self.scan_file_ini)
-                # for table_color in scan.scan(text[:sum_column],
-                #                    start_row + temp_row):
-                #     for column in range(table_color.start_index, 
-                #                         table_color.end_index+1):
-                #         temp_token_fg_color[column] = table_color.rgb
+                scan = Scan(self.scan_file_ini)
+                for table_color in scan.scan(text[:sum_column],
+                                   start_row + temp_row):
+                    for column in range(table_color.start_index, 
+                                        table_color.end_index+1):
+                        temp_token_fg_color[column] = table_color.rgb
             temp_token_color_column = start_column
             # draw ch.
             x_padding = rect.x + self.row_border_width + self.code_folding_width
@@ -328,34 +328,34 @@ class CodeEdit(gtk.ScrolledWindow):
                     None
                     )
             ############################################                 
-            # for ch in temp_column_text:
-            #     if all_ch_width == None:
-            #         bg_rgb = "#FF0000"
-            #     else:    
-            #         bg_rgb = None           
+            for ch in temp_column_text:
+                if all_ch_width == None:
+                    bg_rgb = "#FF0000"
+                else:    
+                    bg_rgb = None           
                     
-            #     try:    
-            #         fg_rgb = temp_token_fg_color[temp_token_color_column]
-            #     except:    
-            #         fg_rgb = "#000000"
-            #     temp_ch_width = self.draw_text_source_view_buffer_text_ch(
-            #         ch,
-            #         cr, 
-            #         x_padding + all_ch_width + temp_padding_width,
-            #         y_padding,
-            #         fg_rgb,
-            #         bg_rgb
-            #         )
-            #     # save ch width.
-            #     all_ch_width += temp_ch_width                
-            #     temp_token_color_column += 1
-            all_ch_width = self.get_ch_size(temp_column_text)[0]
-            self.draw_text_source_view_buffer_text_ch(temp_column_text,
-                                                      cr,
-                                                      x_padding + temp_padding_width,
-                                                      y_padding,
-                                                      "#000000",
-                                                      None)
+                try:    
+                    fg_rgb = temp_token_fg_color[temp_token_color_column]
+                except:    
+                    fg_rgb = "#000000"
+                temp_ch_width = self.draw_text_source_view_buffer_text_ch(
+                    ch,
+                    cr, 
+                    x_padding + all_ch_width + temp_padding_width,
+                    y_padding,
+                    fg_rgb,
+                    bg_rgb
+                    )
+                # save ch width.
+                all_ch_width += temp_ch_width                
+                temp_token_color_column += 1
+            # test ...    
+            # self.draw_text_source_view_buffer_text_ch(temp_column_text,
+            #                                           cr,
+            #                                           x_padding + temp_padding_width,
+            #                                           y_padding,
+            #                                           "#000000",
+            #                                           None)
             temp_row += 1            
             
     def draw_text_source_view_buffer_text_ch(self, ch, cr, 

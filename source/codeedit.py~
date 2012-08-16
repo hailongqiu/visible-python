@@ -124,10 +124,10 @@ class CodeEdit(gtk.ScrolledWindow):
         self.ch_bg_color = "#000000"
         self.select_row_color = "#4169E1"
         self.select_row_alpha   = 0.1
-        self.scan_file_ini = "language/python.ini"
+        self.scan_file_ini = "codeedit/language/python.ini"
         self.notes_symbol = "#"
         
-    def init_language_config(self, config_path="language/python.ini"):
+    def init_language_config(self, config_path="codeedit/language/python.ini"):
         self.language_config = Config(config_path)
         
     def init_code_edit_config(self, config_path=INIT_CONFIG_PATH):

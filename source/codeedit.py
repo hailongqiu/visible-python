@@ -124,10 +124,10 @@ class CodeEdit(gtk.ScrolledWindow):
         self.ch_bg_color = "#000000"
         self.select_row_color = "#4169E1"
         self.select_row_alpha   = 0.1
-        self.scan_file_ini = "language/python.ini"
+        self.scan_file_ini = "codeedit/language/python.ini"
         self.notes_symbol = "#"
         
-    def init_language_config(self, config_path="language/python.ini"):
+    def init_language_config(self, config_path="codeedit/language/python.ini"):
         self.language_config = Config(config_path)
         
     def init_code_edit_config(self, config_path=INIT_CONFIG_PATH):
@@ -211,7 +211,7 @@ class CodeEdit(gtk.ScrolledWindow):
             "Ctrl + e":self.cursor_row_end,
             "Ctrl + s":self.save,
             "Ctrl + :":self.cursor_start_insert_ch,
-            "Ctrl + m":self.test_show_window,
+            # "Ctrl + m":self.test_show_window,
             ###############################
             "F11":self.key_full_window
             }
@@ -295,72 +295,72 @@ class CodeEdit(gtk.ScrolledWindow):
     def draw_text_source_view_buffer_text(self, cr, rect):
         start_row, end_row, sum_row = self.get_scrolled_window_height()
         temp_row = 0
-        # start_column, end_column, sum_column = self.get_scrolled_window_width(start_row + temp_row) 
-        
+        # start_column, end_column, sum_column = self.get_scrolled_window_width(start_row + temp_row)         
         for text in self.get_buffer_row_start_to_end_text(start_row, sum_row):
-            start_column, end_column, sum_column = self.get_scrolled_window_width(start_row + temp_row)
-            all_ch_width = 0
-            # get token color.
-            if text:
-                temp_token_fg_color = {}
-                scan = Scan(self.scan_file_ini)
-                for table_color in scan.scan(text[:sum_column],
-                                   start_row + temp_row):
-                    for column in range(table_color.start_index, 
-                                        table_color.end_index+1):
-                        temp_token_fg_color[column] = table_color.rgb
-            temp_token_color_column = start_column
-            # draw ch.
+            # start_column, end_column, sum_column = self.get_scrolled_window_width(start_row + temp_row)
+            # all_ch_width = 0
+            # # get token color.
+            # if text:
+            #     temp_token_fg_color = {}
+            #     scan = Scan(self.scan_file_ini)
+            #     for table_color in scan.scan(text[:sum_column],
+            #                        start_row + temp_row):
+            #         for column in range(table_color.start_index, 
+            #                             table_color.end_index+1):
+            #             temp_token_fg_color[column] = table_color.rgb
+            # temp_token_color_column = start_column
+            # # draw ch.
             x_padding = rect.x + self.row_border_width + self.code_folding_width
             y_padding = rect.y + (start_row + temp_row) * self.row_font_height
-            temp_padding_width = self.get_ch_size(self.text_buffer_list[temp_row][:start_column])[0]
-            temp_column_text = self.get_buffer_column_start_to_end_text(text, start_column, sum_column)
+            # temp_padding_width = self.get_ch_size(self.text_buffer_list[temp_row][:start_column])[0]
+            # temp_column_text = self.get_buffer_column_start_to_end_text(text, start_column, sum_column)
             ############################################
             ## draw first ch.
-            try:    
-                first_fg_rgb = temp_token_fg_color[temp_token_color_column-1]
-            except:    
-                first_fg_rgb = "#000000"
-            if self.get_hadjustment().get_value() > 0:
-                # draw a ch.
-                temp_text = self.text_buffer_list[temp_row][start_column-1:start_column]
-                self.draw_text_source_view_buffer_text_ch(
-                    temp_text,
-                    cr,
-                    x_padding + self.get_ch_size(self.text_buffer_list[temp_row][:start_column-1])[0],
-                    y_padding,
-                    first_fg_rgb,
-                    None
-                    )
+            # try:    
+            #     first_fg_rgb = temp_token_fg_color[temp_token_color_column-1]
+            # except:    
+            #     first_fg_rgb = "#000000"
+            # if self.get_hadjustment().get_value() > 0:
+            #     # draw a ch.
+            #     temp_text = self.text_buffer_list[temp_row][start_column-1:start_column]
+            #     self.draw_text_source_view_buffer_text_ch(
+            #         temp_text,
+            #         cr,
+            #         x_padding + self.get_ch_size(self.text_buffer_list[temp_row][:start_column-1])[0],
+            #         y_padding,
+            #         first_fg_rgb,
+            #         None
+            #         )
             ############################################                 
-            for ch in temp_column_text:
-                if all_ch_width == None:
-                    bg_rgb = "#FF0000"
-                else:    
-                    bg_rgb = None           
+            # for ch in text:
+            #     if all_ch_width == None:
+            #         bg_rgb = "#FF0000"
+            #     else:    
+            #         bg_rgb = None           
                     
-                try:    
-                    fg_rgb = temp_token_fg_color[temp_token_color_column]
-                except:    
-                    fg_rgb = "#000000"
-                temp_ch_width = self.draw_text_source_view_buffer_text_ch(
-                    ch,
-                    cr, 
-                    x_padding + all_ch_width + temp_padding_width,
-                    y_padding,
-                    fg_rgb,
-                    bg_rgb
-                    )
-                # save ch width.
-                all_ch_width += temp_ch_width
-                temp_token_color_column += 1
-            # test ...    
-            # self.draw_text_source_view_buffer_text_ch(temp_column_text,
-            #                                           cr,
-            #                                           x_padding + temp_padding_width,
-            #                                           y_padding,
-            #                                           "#000000",
-            #                                           None)
+            #     try:    
+            #         fg_rgb = temp_token_fg_color[temp_token_color_column]
+            #     except:    
+            #         fg_rgb = "#000000"
+            #     temp_ch_width = self.draw_text_source_view_buffer_text_ch(
+            #         ch,
+            #         cr, 
+            #         # x_padding + all_ch_width + temp_padding_width,
+            #         x_padding + all_ch_width,
+            #         y_padding,
+            #         fg_rgb,
+            #         bg_rgb
+            #         )
+            #     # save ch width.
+            #     all_ch_width += temp_ch_width
+            #     temp_token_color_column += 1
+            # test ...
+            self.draw_text_source_view_buffer_text_ch(text,
+                                                      cr,
+                                                      x_padding,
+                                                      y_padding,
+                                                      "#000000",
+                                                      None)
             temp_row += 1            
             
     def draw_text_source_view_buffer_text_ch(self, ch, cr, 
@@ -370,8 +370,15 @@ class CodeEdit(gtk.ScrolledWindow):
         context = pangocairo.CairoContext(cr)
         layout = context.create_layout()
         layout.set_font_description(pango.FontDescription("%s %s" % (self.font_type, self.font_size)))         
+        
         # Set font position.
         layout.set_text(ch)
+        pango_list = pango.AttrList()
+        pango_list.insert(pango.AttrForeground(65535, 0, 0, 0, 52))
+        pango_list.insert(pango.AttrBackground(0, 0, 65535, 10, 20))
+        pango_list.insert(pango.AttrForeground(0, 0, 65535, 52, 120))
+        
+        layout.set_attributes(pango_list)
         ch_width, ch_height = layout.get_pixel_size()
         cr.move_to(offset_x, 
                    offset_y)
@@ -505,13 +512,14 @@ class CodeEdit(gtk.ScrolledWindow):
     def draw_text_source_view_border(self, widget, cr, rect):
         start_index = self.get_scrolled_window_height()[0]
         offset_x, offset_y = self.get_coordinates(widget, rect.x, rect.y)
+        paernt_rect = self.allocation
         # Draw border.        
         self.draw_rectangle(
             cr,
             -offset_x,
             rect.y + (start_index * self.row_font_height),
             self.row_border_width,
-            rect.height,
+            paernt_rect.height,
             self.row_border_color
             )
         # Draw code folding.
@@ -523,13 +531,15 @@ class CodeEdit(gtk.ScrolledWindow):
     def draw_text_source_view_code_folding(self, cr, rect, offset_x):
         start_index = self.get_scrolled_window_height()[0]
         code_folding_x = rect.x + self.row_border_width
+        paernt_rect = self.allocation
         # draw text source code folding background.
         self.draw_alpha_rectangle(
             cr,
             offset_x +  code_folding_x,
             rect.y + (start_index * self.row_font_height),
             self.code_folding_width,
-            rect.y + rect.height,
+            # rect.y + rect.height,
+            paernt_rect.height,
             self.code_folding_bg_color,
             self.code_folding_bg_alpha
             )                
@@ -839,14 +849,15 @@ class CodeEdit(gtk.ScrolledWindow):
     
     def cursor_start_insert_ch_function(self):    
         if self.text_buffer_list[self.cursor_row - 1] != "":            
-            if self.text_buffer_list[self.cursor_row - 1][0] != self.notes_symbol:
+            # if self.text_buffer_list[self.cursor_row - 1][0] != self.notes_symbol:
+            if not self.text_buffer_list[self.cursor_row - 1].startswith(self.notes_symbol):
                 self.text_buffer_list[self.cursor_row-1] = self.cursor_row_insert_text(0, self.notes_symbol)
                 self.cursor_padding_x += self.get_ch_size(self.notes_symbol)[0]
-                self.cursor_column += 1
+                self.cursor_column += len(self.notes_symbol)
             else:
-                self.text_buffer_list[self.cursor_row-1] = self.text_buffer_list[self.cursor_row-1][1:]            
+                self.text_buffer_list[self.cursor_row-1] = self.text_buffer_list[self.cursor_row-1][len(self.notes_symbol):]
                 self.cursor_padding_x = max(self.cursor_padding_x - self.get_ch_size(self.notes_symbol)[0], 0)
-                self.cursor_column = max(self.cursor_column - 1, 0)
+                self.cursor_column = max(self.cursor_column - len(self.notes_symbol), 0)
             self.row_line_queue_draw_area()
         
     ############################################################

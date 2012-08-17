@@ -544,13 +544,12 @@ class CodeEdit(gtk.ScrolledWindow):
             self.code_folding_bg_alpha
             )                
         # draw code folding line.
-        self.code_folding_height = self.current_row * self.row_font_height
         self.draw_alpha_rectangle(
             cr,
             offset_x + code_folding_x + int(self.code_folding_width/2),
             rect.y + (start_index * self.row_font_height),
             1,
-            rect.y + self.code_folding_height,
+            paernt_rect.height,
             self.code_folding_line_color,
             self.code_folding_line_alpha
             )        

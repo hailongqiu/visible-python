@@ -28,10 +28,10 @@ import pango
 import pangocairo
 
 from codehintswindow import CodeHintsWindow
-from ini   import Config
+from ini   import Config, get_home_path
 from regex import Scan
 
-INIT_CONFIG_PATH = ".config/visual_python/code_edit.ini"
+INIT_CONFIG_PATH = "codeedit/language/config.ini"
 INIT_FONT_TYPE = "文泉驿等宽微米黑"
 INIT_FONT_SIZE = 11
 
@@ -41,16 +41,16 @@ SELECT_MOVE_COPY_STATE_RIGHT = 2
 
 class CodeEdit(gtk.ScrolledWindow):
     def __init__(self):
-        gtk.ScrolledWindow.__init__(self)         
+        gtk.ScrolledWindow.__init__(self)                 
+        self.init_code_edit_config() # init code edit config.
+        self.init_language_config()  # init language config.        
         self.init_code_line_value()
         self.init_row_border()
-        self.init_code_folding()
         self.init_border_row_number()
+        self.init_code_folding()        
         self.init_cursor()
         self.init_select_value()
-        self.init_text_buffer_value()
-        self.init_language_config()  # init language config.
-        self.init_code_edit_config() # init code edit config.
+        self.init_text_buffer_value()                
         self.init_font()   # init font-> type and size.    
         self.init_immultiontext()    # init immultiontext.
         self.init_text_source_view() # init text source view.
@@ -60,8 +60,8 @@ class CodeEdit(gtk.ScrolledWindow):
         
         # scrolled window add text source view.
         self.add_with_viewport(self.text_source_view)
-        gtk.timeout_add(888, self.show_and_hide_cursor)
-        
+        gtk.timeout_add(self.cursor_time_second, self.show_and_hide_cursor)
+                
     def show_and_hide_cursor(self):
         if self.cursor_time_bool:
             self.cursor_show_bool = not self.cursor_show_bool
@@ -69,15 +69,67 @@ class CodeEdit(gtk.ScrolledWindow):
         return self.cursor_time_bool
     
     ###########################################################    
-    ### Init value and connect.
-    def init_code_line_value(self):    
-        self.code_line_padding_x = 888
-        self.code_line_color = "#000000"
-        self.code_line_alpha = 0.1
+    ### Init value and connect.    
+    def init_code_edit_config(self, config_path=INIT_CONFIG_PATH):
+        self.code_edit_config = Config(config_path)
+        
+    def init_language_config(self, language_path="codeedit/language/python.ini"):
+        language_path = language_path
+        # read config ini[language_path].
+        config_language_path = self.code_edit_config.get("LANGUAGE", "language_path")
+        if config_language_path:
+            language_path = config_language_path
+            
+        self.language_path = language_path
+        
+    def init_code_line_value(self):        
+        padding_x = 888
+        color = "#000000"
+        alpha = 0.1
+        config_padding_x = self.code_edit_config.get("CODE_LINE_VALUE", "code_line_padding_x")
+        if config_padding_x:
+            padding_x = config_padding_x
+        config_color = self.code_edit_config.get("CODE_LINE_VALUE", "code_line_color")    
+        if config_color:
+            color = config_color
+        config_alpha = self.code_edit_config.get("CODE_LINE_VALUE", "code_line_alpha") 
+        if config_alpha:
+            alpha = config_alpha
+            
+        self.code_line_padding_x = int(padding_x)
+        self.code_line_color = color
+        self.code_line_alpha = float(alpha)
 
     def init_row_border(self):    
-        self.row_border_color = "#F5F5F5" #ADD8E6
-        self.row_border_width = 45
+        color = "#F5F5F5"
+        width = 45
+        config_color = self.code_edit_config.get("ROW_BORDER", "row_border_color")
+        config_width = self.code_edit_config.get("ROW_BORDER", "row_border_width")
+        if config_color:
+            color = config_color
+        if config_width:    
+            width = config_width
+            
+        self.row_border_color = color
+        self.row_border_width = int(width)
+        
+    def init_border_row_number(self):    
+        color = "#4169E1"
+        alpha = 0.8
+        padding_x = 15
+        config_color = self.code_edit_config.get("ROW_BORDER", "row_number_color")
+        config_alpha = self.code_edit_config.get("ROW_BORDER", "row_number_alpha")
+        config_padding_x = self.code_edit_config.get("ROW_BORDER", "row_number_padding_x")
+        if config_color:
+            color = config_color
+        if config_alpha:    
+            alpha = config_alpha
+        if config_padding_x:    
+            padding_x = config_padding_x
+            
+        self.row_number_color = color
+        self.row_number_alpha = float(alpha)
+        self.row_number_padding_x = int(padding_x)
         
     def init_code_folding(self):    
         self.code_folding_width  = 15
@@ -85,27 +137,41 @@ class CodeEdit(gtk.ScrolledWindow):
         self.code_folding_bg_alpha   = 1
         self.code_folding_bg_color   = "#FFFFFF"
         self.code_folding_line_alpha = 0.4
-        self.code_folding_line_color = "#000000"   
-        
-    def init_border_row_number(self):    
-        self.row_number_color = "#4169E1"
-        self.row_number_alpha = 0.8
-        self.row_number_padding_x = 15
-        
-    def init_cursor(self):    
+        self.code_folding_line_color = "#000000"
+                
+    def init_cursor(self):
         self.cursor_column = 0
-        self.cursor_color = "#000000"
-        self.cursor_show_bool = True
-        self.cursor_width = 1
+        self.cursor_show_bool = True        
         self.cursor_padding_x = 0
-        self.cursor_time_bool = False
         
-    def init_select_value(self):    
+        color = "#000000"
+        width = 1
+        time_bool = False
+        time_second = 888
+        config_color = self.code_edit_config.get("CURSOR", "cursor_color")
+        config_width = self.code_edit_config.get("CURSOR", "cursor_width")
+        config_time_bool = self.code_edit_config.get("CURSOR", "cursor_time_bool")
+        config_time_second = self.code_edit_config.get("CURSOR", "cursor_time_second")
+        
+        if config_color:
+            color = config_color
+        if config_width:    
+            width = config_width
+        if config_time_bool and "true" == config_time_bool.lower():
+                time_bool = True
+        if config_time_second:    
+            time_second = config_time_second
+            
+        self.cursor_color = color
+        self.cursor_width = int(width)
+        self.cursor_time_bool = int(time_bool)
+        self.cursor_time_second = int(time_second)
+        
+        
+    def init_select_value(self):
         self.select_start_to_end_state = SELECT_MOVE_COPY_STATE_MID
-        self.select_copy_bool = False        
+        self.select_copy_bool = False
         self.select_copy_draw_bool = False
-        self.select_start_to_end_color = "#000000"
-        self.select_start_to_end_alpha = 0.5
         self.start_select_padding_x = 0
         self.end_select_padding_x   = 0
         self.start_select_row    = 0
@@ -113,30 +179,48 @@ class CodeEdit(gtk.ScrolledWindow):
         self.start_select_column = 0
         self.end_select_column   = 0        
         
-    def init_text_buffer_value(self):    
+        color = "#000000"
+        alpha = 0.5
+        config_color = self.code_edit_config.get("SELECT_VALUE", "select_start_to_end_color")
+        config_alpha = self.code_edit_config.get("SELECT_VALUE", "select_start_to_end_alpha")
+        if config_color:
+            color = config_color
+        if config_alpha:    
+            alpha = config_alpha
+            
+        self.select_start_to_end_color = color
+        self.select_start_to_end_alpha = float(alpha)
+
+    def init_text_buffer_value(self): # 123456    
+        notes_symbol = "#"
+        config_notes_symbol = self.code_edit_config.get("TEXT_BUFFER_VALUE", "notes_symbol")
+        if config_notes_symbol:
+            notes_symbol = config_notes_symbol
+            
         self.text_buffer_list = [""]
         self.tab_string = "    "
         self.current_row = 1
         self.cursor_row  = 1        
         self.map_buffer = None
-        self.ch_bg_alpha = 0.5
-        self.text_source_view_bg_color = "#FFFFFF"
-        self.ch_bg_color = "#000000"
+        self.text_source_view_bg_color = "#FFFFFF" # 整个代码编辑器的背景:白色.
+        self.ch_fg_color = "#000000" # 显示文本中字符的初始化颜色值:黑色.
         self.select_row_color = "#4169E1"
         self.select_row_alpha   = 0.1
-        self.scan_file_ini = "codeedit/language/python.ini"
-        self.notes_symbol = "#"
-        
-    def init_language_config(self, config_path="codeedit/language/python.ini"):
-        self.language_config = Config(config_path)
-        
-    def init_code_edit_config(self, config_path=INIT_CONFIG_PATH):
-        self.code_edit_config = Config(config_path)
+        self.scan_file_ini = self.language_path
+        self.notes_symbol = notes_symbol
         
     def init_font(self, font_type=INIT_FONT_TYPE, font_size=INIT_FONT_SIZE):
         '''Init font type/size.'''
+        config_font_type = self.code_edit_config.get("FONT", "font_type")
+        config_font_size = self.code_edit_config.get("FONT", "font_size")
+        
+        if config_font_type:
+            font_type = config_font_type
+        if config_font_size:    
+            font_size = config_font_size
+            
         self.font_type  = font_type
-        self.font_size  = font_size
+        self.font_size  = int(font_size)
         self.column_font_width = self.get_ch_size(" ")[0]
         self.row_font_height = self.get_ch_size(" ")[1]
         
@@ -294,8 +378,6 @@ class CodeEdit(gtk.ScrolledWindow):
     # draw_text_source_view_buffer_text.
     def draw_text_source_view_buffer_text(self, cr, rect):
         start_row, end_row, sum_row = self.get_scrolled_window_height()
-        temp_row = 0
-        # start_column, end_column, sum_column = self.get_scrolled_window_width(start_row + temp_row)         
         for text in self.get_buffer_row_start_to_end_text(start_row, sum_row):
             # start_column, end_column, sum_column = self.get_scrolled_window_width(start_row + temp_row)
             # all_ch_width = 0
@@ -309,63 +391,27 @@ class CodeEdit(gtk.ScrolledWindow):
             #                             table_color.end_index+1):
             #             temp_token_fg_color[column] = table_color.rgb
             # temp_token_color_column = start_column
-            # # draw ch.
+            pango_list = pango.AttrList()
+            pango_list.insert(pango.AttrForeground(65535, 0, 0, 0, 6))
+            pango_list.insert(pango.AttrBackground(0, 0, 65535, 7, 8))
+            pango_list.insert(pango.AttrBackground(0, 0, 65535, 11, 12))
+            
+            # draw ch.
             x_padding = rect.x + self.row_border_width + self.code_folding_width
-            y_padding = rect.y + (start_row + temp_row) * self.row_font_height
-            # temp_padding_width = self.get_ch_size(self.text_buffer_list[temp_row][:start_column])[0]
-            # temp_column_text = self.get_buffer_column_start_to_end_text(text, start_column, sum_column)
-            ############################################
-            ## draw first ch.
-            # try:    
-            #     first_fg_rgb = temp_token_fg_color[temp_token_color_column-1]
-            # except:    
-            #     first_fg_rgb = "#000000"
-            # if self.get_hadjustment().get_value() > 0:
-            #     # draw a ch.
-            #     temp_text = self.text_buffer_list[temp_row][start_column-1:start_column]
-            #     self.draw_text_source_view_buffer_text_ch(
-            #         temp_text,
-            #         cr,
-            #         x_padding + self.get_ch_size(self.text_buffer_list[temp_row][:start_column-1])[0],
-            #         y_padding,
-            #         first_fg_rgb,
-            #         None
-            #         )
-            ############################################                 
-            # for ch in text:
-            #     if all_ch_width == None:
-            #         bg_rgb = "#FF0000"
-            #     else:    
-            #         bg_rgb = None           
-                    
-            #     try:    
-            #         fg_rgb = temp_token_fg_color[temp_token_color_column]
-            #     except:    
-            #         fg_rgb = "#000000"
-            #     temp_ch_width = self.draw_text_source_view_buffer_text_ch(
-            #         ch,
-            #         cr, 
-            #         # x_padding + all_ch_width + temp_padding_width,
-            #         x_padding + all_ch_width,
-            #         y_padding,
-            #         fg_rgb,
-            #         bg_rgb
-            #         )
-            #     # save ch width.
-            #     all_ch_width += temp_ch_width
-            #     temp_token_color_column += 1
-            # test ...
+            y_padding = rect.y + (start_row) * self.row_font_height
             self.draw_text_source_view_buffer_text_ch(text,
                                                       cr,
                                                       x_padding,
-                                                      y_padding,
-                                                      "#000000",
-                                                      None)
-            temp_row += 1            
+                                                      y_padding, 
+                                                      pango_list,
+                                                      self.ch_fg_color
+                                                      )
+            start_row += 1
             
     def draw_text_source_view_buffer_text_ch(self, ch, cr, 
-                                             offset_x, offset_y, 
-                                             fg_rgb, bg_rgb=None
+                                             offset_x, offset_y,                                              
+                                             pango_list,
+                                             init_fg_color
                                              ):    
         context = pangocairo.CairoContext(cr)
         layout = context.create_layout()
@@ -373,24 +419,13 @@ class CodeEdit(gtk.ScrolledWindow):
         
         # Set font position.
         layout.set_text(ch)
-        pango_list = pango.AttrList()
-        pango_list.insert(pango.AttrForeground(65535, 0, 0, 0, 52))
-        pango_list.insert(pango.AttrBackground(0, 0, 65535, 10, 20))
-        pango_list.insert(pango.AttrForeground(0, 0, 65535, 52, 120))
         
         layout.set_attributes(pango_list)
         ch_width, ch_height = layout.get_pixel_size()
         cr.move_to(offset_x, 
                    offset_y)
-        # set ch background color.
-        # self.set_ch_background(
-        #     cr, 
-        #     offset_x, offset_y, 
-        #     ch_width, ch_height, 
-        #     self.ch_bg_alpha, bg_rgb
-        #     )        
         # Set font rgb.
-        cr.set_source_rgb(*self.color_to_rgb(fg_rgb))
+        cr.set_source_rgb(*self.color_to_rgb(init_fg_color))
         # Show font.
         context.update_layout(layout)
         context.show_layout(layout)
@@ -437,7 +472,7 @@ class CodeEdit(gtk.ScrolledWindow):
             start_padding_x = text_view_padding_width
             end_padding_x = text_view_padding_width
             paernt_rect = self.allocation
-            ###################
+            ###################################
             if self.select_start_to_end_state == SELECT_MOVE_COPY_STATE_MID:
                 if end_select_padding_width < start_select_padding_width: # sawp start and end.
                     start_select_padding_width, end_select_padding_width = (end_select_padding_width, start_select_padding_width)
@@ -1196,6 +1231,7 @@ class CodeEdit(gtk.ScrolledWindow):
         # self.get_hadjustment().set_value(self.get_hadjustment().get_value() + 10)
         pass
                 
+    
 class Buffers(object):
     '''Init buffer.'''
     def __init__(self):

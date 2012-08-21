@@ -75,7 +75,9 @@ class CodeEdit(gtk.ScrolledWindow):
         temp_config_path = self.config_path_ini.get("CONFIG_PATH", "config_path")
         if temp_config_path and os.path.isfile(temp_config_path):
             config_path = temp_config_path
-        self.code_edit_config = Config(config_path)
+            
+        self.code_edit_config_path = config_path
+        self.code_edit_config = Config(self.code_edit_config_path)
         
     def init_language_config(self, language_path="codeedit/language/python.ini"):
         language_path = language_path
@@ -387,7 +389,7 @@ class CodeEdit(gtk.ScrolledWindow):
             # get token color.
             pango_list = pango.AttrList()
             if text:                
-                scan = Scan(self.scan_file_ini)
+                scan = Scan(self.scan_file_ini, self.code_edit_config_path)
                 for table_color in scan.scan(text[:sum_column],
                                              start_row):
                     r, g, b = self.hex_color_to_65535_rgb(table_color.rgb)

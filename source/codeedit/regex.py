@@ -41,7 +41,7 @@ class SymbolTable(object):
         self.rgb         = "#000000"
         
 class Scan(object):        
-    def __init__(self, language_file):
+    def __init__(self, language_file, code_edit_file):
         self.symbol_table_list = []
         
         self.symbol = ["~", "`", "!", "@", "#", 
@@ -52,6 +52,8 @@ class Scan(object):
                        "<", ",", ">", ".", "/", "?", '"', "_"]
         
         self.config = Config(language_file)
+        self.code_edit_config = Config(code_edit_file)
+        
         self.keyword = self.config.get_argvs("keyword").keys()
         '''Init value.'''
         self.index = 0
@@ -65,6 +67,10 @@ class Scan(object):
         self.token = ""
         
         self.type           = SYMBOL_TABLE_VARIABLE_TYPE
+        
+        self.init_type_symbol()
+        
+    def init_type_symbol(self):        
         self.function_type  = ["def"]
         self.class_type     = ["class"]
         self.variable_type  = ["self"]
@@ -74,6 +80,7 @@ class Scan(object):
         self.text = text
         self.row  = row
         # Read token.
+        self.temp_cn_next = 0
         if self.text:
             while True:
                 ch = self.text[self.index]
@@ -159,8 +166,8 @@ class Scan(object):
         symbol_table.type  = SYMBOL_TABLE_NUMBER_TYPE
         symbol_table.token = self.token
         symbol_table.row   = self.row
-        symbol_table.start_index = self.start_index
-        symbol_table.end_index   = self.end_index - 1
+        symbol_table.start_index = self.start_index + self.temp_cn_next
+        symbol_table.end_index   = self.end_index - 1 + self.temp_cn_next
         config_rgb = self.config.get("keyword", self.token)
         
         if self.token in self.function_type:
@@ -172,9 +179,10 @@ class Scan(object):
             
             
         if not config_rgb:
-            self.variable_save()
+            # self.variable_save()
+            pass
         else:    
-            symbol_table.rgb = config_rgb            
+            symbol_table.rgb = config_rgb
             # print "================="
             # print "type:", symbol_table.type
             # print "token:", symbol_table.token
@@ -200,11 +208,11 @@ class Scan(object):
             try:
                 variable_ch = self.text[self.next]
             except:    
-                self.variable_save()
+                # self.variable_save()
                 break
             
             if self.next > self.len_text() - 1:
-                self.variable_save()
+                # self.variable_save()
                 self.next += 1
                 break
             
@@ -212,7 +220,7 @@ class Scan(object):
                 self.token += variable_ch
                 self.next += 1
             else:
-                self.variable_save()
+                # self.variable_save()
                 break                       
         ##################################################    
         # print "======================"
@@ -229,25 +237,25 @@ class Scan(object):
         symbol_table = SymbolTable()        
         symbol_table.token = self.token
         symbol_table.row   = self.row
-        symbol_table.start_index = self.start_index
-        symbol_table.end_index   = self.end_index - 1
+        symbol_table.start_index = self.start_index + self.temp_cn_next
+        symbol_table.end_index   = self.end_index - 1 + self.temp_cn_next
                     
         # save color->rgb.
         if self.type ==   SYMBOL_TABLE_VARIABLE_TYPE:
-            config_rgb = self.config.get("keyword", "VARIABLE")
+            config_rgb = self.code_edit_config.get("TEXT_BUFFER_VALUE", "VARIABLE")
         elif self.type == SYMBOL_TABLE_FUNCTION_TYPE:    
-            config_rgb = self.config.get("keyword", "FUNCTION")
+            config_rgb = self.code_edit_config.get("TEXT_BUFFER_VALUE", "FUNCTION")
         elif self.type == SYMBOL_TABLE_CLASS_TYPE:
-            config_rgb = self.config.get("keyword", "CLASS")            
+            config_rgb = self.code_edit_config.get("TEXT_BUFFER_VALUE", "CLASS")            
             
-        self.type =     SYMBOL_TABLE_VARIABLE_TYPE
+        self.type = SYMBOL_TABLE_VARIABLE_TYPE
         
         # save type.    
         symbol_table.type  = self.type
         
-        if not config_rgb:    
-            self.config_rgb = "#000000"
-            
+        if not config_rgb:
+            config_rgb = "#000000"
+        print config_rgb    
         symbol_table.rgb = config_rgb
         
         # print "================="
@@ -258,7 +266,7 @@ class Scan(object):
         # print "end_index:", symbol_table.end_index - 1
         # print "rgb:", symbol_table.rgb
         # print "==========="
-        self.symbol_table_list.append(symbol_table)
+        # self.symbol_table_list.append(symbol_table)
         
     def number_function(self):
         # print "数字处理模块:"
@@ -309,9 +317,9 @@ class Scan(object):
         symbol_table.type  = SYMBOL_TABLE_NUMBER_TYPE
         symbol_table.token = self.token
         symbol_table.row   = self.row
-        symbol_table.start_index = self.start_index
-        symbol_table.end_index   = self.end_index
-        config_rgb = self.config.get("keyword", "NUMBER")
+        symbol_table.start_index = self.start_index + self.temp_cn_next
+        symbol_table.end_index   = self.end_index + self.temp_cn_next
+        config_rgb = self.code_edit_config.get("TEXT_BUFFER_VALUE", "NUMBER")
         if not config_rgb:
             config_rgb = "#000000"
         symbol_table.rgb = config_rgb
@@ -327,7 +335,9 @@ class Scan(object):
 
     def symbol_function(self):
         # print "符号处理模块:"
-        temp_list = list(self.config.get("keyword", "notes_symbol"))
+        # temp_list = list(self.config.get("keyword", "notes_symbol"))
+        temp_list = list(self.code_edit_config.get("TEXT_BUFFER_VALUE", "notes_symbol"))
+        
         if self.text[self.index] == '"':
             # print "字符串类型"
             self.string_function()            
@@ -360,22 +370,24 @@ class Scan(object):
         # set start index.
         self.start_index = self.pre        
         
-        string_bool = False
+        string_bool = False        
+        
         ########################################
         while True:
             try:
                 string_ch = self.text[self.next]
                 self.token += string_ch
-                
                 if string_ch == '"' and string_bool:
                     self.next += 1
                     break
                 string_bool = True
             except:    
                 break
-        
-            self.next += 1
             
+            if not (self.letter_bool(string_ch) or self.number_bool(string_ch) or self.symbol_bool(string_ch)):                
+                self.temp_cn_next += 2                
+            
+            self.next += 1    
         ###################################
         # print "======================"   
         # print "token:", self.token
@@ -392,9 +404,9 @@ class Scan(object):
         symbol_table.type  = SYMBOL_TABLE_STRING_TYPE
         symbol_table.token = self.token
         symbol_table.row = self.row
-        symbol_table.start_index = self.start_index
-        symbol_table.end_index   = self.end_index - 1
-        config_rgb = self.config.get("keyword", "STRING")
+        symbol_table.start_index = self.start_index 
+        symbol_table.end_index   = self.end_index - 1  + self.temp_cn_next
+        config_rgb = self.code_edit_config.get("TEXT_BUFFER_VALUE", "STRING")
         if not config_rgb:
             config_rgb = "#000000"
         symbol_table.rgb = config_rgb
@@ -417,17 +429,20 @@ class Scan(object):
         self.next = self.index
         # set start index.
         self.start_index = self.pre
-        
+        notes_temp_cn_next = 0
         while True:
             try:
                 notes_ch = self.text[self.next]
                 self.token += notes_ch
             except:    
                 self.index     = self.next
-                self.end_index = self.next
+                self.end_index = self.next + notes_temp_cn_next
                 self.notes_save()
                 break
-        
+            
+            if not (self.letter_bool(notes_ch) or self.number_bool(notes_ch) or self.symbol_bool(notes_ch)):
+                notes_temp_cn_next += 2                
+
             self.next += 1
                 
     
@@ -436,11 +451,11 @@ class Scan(object):
         symbol_table.type  = SYMBOL_TABLE_NOTES_TYPE
         symbol_table.token = self.token
         symbol_table.row = self.row
-        symbol_table.start_index = self.start_index
-        symbol_table.end_index   = self.end_index - 1
-        config_rgb = self.config.get("keyword", "NOTES")
+        symbol_table.start_index = self.start_index  + self.temp_cn_next
+        symbol_table.end_index   = self.end_index - 1  + self.temp_cn_next
+        config_rgb = self.code_edit_config.get("TEXT_BUFFER_VALUE", "NOTES")
         if not config_rgb:
-            config_rgb = "#000000"            
+            config_rgb = "#000000"
         symbol_table.rgb = config_rgb
         # print "================="
         # print "type:", symbol_table.type

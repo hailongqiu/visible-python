@@ -384,7 +384,7 @@ class Scan(object):
             except:    
                 break
             
-            if not (self.letter_bool(string_ch) or self.number_bool(string_ch) or self.symbol_bool(string_ch)):                
+            if self.cn_bool(string_ch):
                 self.temp_cn_next += 2                
             
             self.next += 1    
@@ -440,7 +440,7 @@ class Scan(object):
                 self.notes_save()
                 break
             
-            if not (self.letter_bool(notes_ch) or self.number_bool(notes_ch) or self.symbol_bool(notes_ch)):
+            if self.cn_bool(notes_ch):    
                 notes_temp_cn_next += 2                
 
             self.next += 1
@@ -489,6 +489,10 @@ class Scan(object):
     def len_text(self):
         return len(self.text)
     
+    def cn_bool(self, ch):
+        if not (self.letter_bool(ch) or self.number_bool(ch) or self.symbol_bool(ch) or ch in [" "]):
+            return True
+        
 ##########################################################################
 
 ##########################################################################

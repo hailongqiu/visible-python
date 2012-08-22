@@ -97,6 +97,7 @@ class Scan(object):
                     else:    
                         # print "======中文处理===="
                         self.index += 1
+                        self.temp_cn_next += 2
                 else:    
                     self.index += 1
                 
@@ -207,6 +208,8 @@ class Scan(object):
         while True:
             try:
                 variable_ch = self.text[self.next]
+                if self.cn_bool(variable_ch):
+                    self.temp_cn_next += 2
             except:    
                 # self.variable_save()
                 break
@@ -230,8 +233,7 @@ class Scan(object):
         self.index     = self.next
         # save end index.
         self.end_index = self.next
-            
-        
+                    
     def variable_save(self):
         self.end_index = self.next
         symbol_table = SymbolTable()        
@@ -371,7 +373,7 @@ class Scan(object):
         self.start_index = self.pre        
         
         string_bool = False        
-        
+        self.start_index += self.temp_cn_next
         ########################################
         while True:
             try:

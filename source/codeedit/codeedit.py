@@ -218,33 +218,40 @@ class CodeEdit(gtk.ScrolledWindow):
 
     def init_text_buffer_value(self):
         notes_symbol = ";"
-        tab_num = 4    
+        self.tab_num = 4    
         view_bg_color = "#FFFFFF"
         ch_fg_color = "#000000"
         select_row_alpha = 0.1
         select_row_color = "#4169E1"
-        
+        # get notes symbol.
         config_notes_symbol = self.code_edit_config.get("TEXT_BUFFER_VALUE", "notes_symbol")
         if config_notes_symbol:
             notes_symbol = config_notes_symbol            
+        # get tab num.
         config_tab_num = self.code_edit_config.get("TEXT_BUFFER_VALUE", "tab_num")
         if config_tab_num:
-            tab_num = config_tab_num
+            self.tab_num = int(config_tab_num)
+        # get view bg color.    
         config_view_bg_color = self.code_edit_config.get("TEXT_BUFFER_VALUE", "text_source_view_bg_color")
         if config_view_bg_color:
             view_bg_color = config_view_bg_color
+        # get ch fg color.    
         config_ch_fg_color = self.code_edit_config.get("TEXT_BUFFER_VALUE", "VARIABLE")    
         if config_ch_fg_color:    
             ch_fg_color = config_ch_fg_color
+        # get select row alpha.    
         config_select_row_alpha = self.code_edit_config.get("TEXT_BUFFER_VALUE", "select_row_alpha")    
         if config_select_row_alpha:
             select_row_alpha = config_select_row_alpha        
+        # get select row color.    
         config_select_row_color = self.code_edit_config.get("TEXT_BUFFER_VALUE", "select_row_color")
         if config_select_row_color:    
             select_row_color = config_select_row_color
             
         self.text_buffer_list = [""]
-        self.tab_string = "    "
+        self.tab_string = ""
+        for num in range(self.tab_num):
+            self.tab_string += " "
         self.current_row = 1
         self.cursor_row  = 1        
         self.map_buffer = None
@@ -345,7 +352,8 @@ class CodeEdit(gtk.ScrolledWindow):
             "Ctrl + :":self.cursor_start_insert_ch,
             # "Ctrl + m":self.test_show_window,
             ###############################
-            "F11":self.key_full_window
+            "F11":self.key_full_window,
+            "Tab":self.key_tab_string
             }
         
     def init_code_hints_window(self):    
@@ -772,6 +780,8 @@ class CodeEdit(gtk.ScrolledWindow):
     # text_source_view_key_press_event.
     def text_source_view_key_press_event(self, widget, event):
         self.handle_key_press(widget, event)
+        widget.grab_focus()
+        return True
         
     def handle_key_press(self, widget, event):
         input_method_filt = self.im.filter_keypress(event)
@@ -872,6 +882,15 @@ class CodeEdit(gtk.ScrolledWindow):
         else:    
             self.get_toplevel().fullscreen()
             
+    def key_tab_string(self):        
+        temp_buffer = self.text_buffer_list[self.cursor_row - 1]
+        start_buffer = temp_buffer[:self.cursor_column]
+        end_buffer = temp_buffer[self.cursor_column:]
+        self.cursor_column += self.tab_num
+        self.text_buffer_list[self.cursor_row - 1] = start_buffer + self.tab_string + end_buffer
+        self.cursor_padding_x = self.get_ch_size(self.text_buffer_list[self.cursor_row - 1][:self.cursor_column])[0]
+        self.row_line_queue_draw_area()
+        
     def cursor_down(self):    
         if self.cursor_row < self.current_row:
             token_all_width = self.get_ch_size(self.text_buffer_list[self.cursor_row][:self.cursor_column])[0]

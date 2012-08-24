@@ -71,9 +71,23 @@ class Scan(object):
         self.init_type_symbol()
         
     def init_type_symbol(self):        
-        self.function_type  = ["def"]
-        self.class_type     = ["class"]
-        self.variable_type  = ["self"]
+        function_type_list = [""]
+        class_type_list = [""]
+        variable_type_list = [""]
+        #################################
+        config_function_type = self.code_edit_config.get("TEXT_BUFFER_VALUE", "function_type")
+        if config_function_type:
+            function_type_list = (config_function_type).split(",")
+        config_class_type = self.code_edit_config.get("TEXT_BUFFER_VALUE", "class_type")    
+        if config_class_type:
+            class_type_list = config_class_type.split(",")
+        config_variable_type = self.code_edit_config.get("TEXT_BUFFER_VALUE", "variable_type")
+        if config_variable_type:
+            variable_type_list = config_variable_type.split(",")
+        #################################    
+        self.function_type  = function_type_list
+        self.class_type     = class_type_list
+        self.variable_type  = variable_type_list
         
     def scan(self, text, row):    
         # Save text and row.
@@ -180,8 +194,8 @@ class Scan(object):
             
             
         if not config_rgb:
-            # self.variable_save()
-            pass
+            self.variable_save()
+            # pass
         else:    
             symbol_table.rgb = config_rgb
             # print "================="
@@ -211,11 +225,11 @@ class Scan(object):
                 if self.cn_bool(variable_ch):
                     self.temp_cn_next += 2
             except:    
-                # self.variable_save()
+                self.variable_save()
                 break
             
             if self.next > self.len_text() - 1:
-                # self.variable_save()
+                self.variable_save()
                 self.next += 1
                 break
             
@@ -223,7 +237,7 @@ class Scan(object):
                 self.token += variable_ch
                 self.next += 1
             else:
-                # self.variable_save()
+                self.variable_save()
                 break                       
         ##################################################    
         # print "======================"
@@ -257,7 +271,7 @@ class Scan(object):
         
         if not config_rgb:
             config_rgb = "#000000"
-        print config_rgb    
+            
         symbol_table.rgb = config_rgb
         
         # print "================="
@@ -268,7 +282,7 @@ class Scan(object):
         # print "end_index:", symbol_table.end_index - 1
         # print "rgb:", symbol_table.rgb
         # print "==========="
-        # self.symbol_table_list.append(symbol_table)
+        self.symbol_table_list.append(symbol_table)
         
     def number_function(self):
         # print "数字处理模块:"

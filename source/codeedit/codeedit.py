@@ -137,13 +137,32 @@ class CodeEdit(gtk.ScrolledWindow):
         self.row_number_alpha = float(alpha)
         self.row_number_padding_x = int(padding_x)
         
-    def init_code_folding(self):    
-        self.code_folding_width  = 15
+    def init_code_folding(self):                    
         self.code_folding_height = 0
-        self.code_folding_bg_alpha   = 1
-        self.code_folding_bg_color   = "#FFFFFF"
-        self.code_folding_line_alpha = 0.4
-        self.code_folding_line_color = "#000000"
+        self.code_folding_width  = 15
+        
+        bg_alpha = 1
+        bg_color = "#FFFFFF"
+        line_alpha = 0.4
+        line_color = "#000000"
+        
+        config_bg_alpha = self.code_edit_config.get("CODE_FOLDING", "code_folding_bg_alpha")
+        if config_bg_alpha:
+            bg_alpha = config_bg_alpha
+        config_bg_color = self.code_edit_config.get("CODE_FOLDING", "code_folding_bg_color")
+        if config_bg_color:
+            bg_color = config_bg_color
+        config_line_alpha = self.code_edit_config.get("CODE_FOLDING", "code_folding_line_alpha")
+        if config_line_alpha:
+            line_alpha = config_line_alpha
+        config_line_color = self.code_edit_config.get("CODE_FOLDING", "code_folding_line_color")
+        if config_line_color:
+            line_color = config_line_color            
+                
+        self.code_folding_bg_alpha   = float(bg_alpha)
+        self.code_folding_bg_color   = str(bg_color)
+        self.code_folding_line_alpha = float(line_alpha)
+        self.code_folding_line_color = str(line_color)
                 
     def init_cursor(self):
         self.cursor_column = 0
@@ -197,21 +216,44 @@ class CodeEdit(gtk.ScrolledWindow):
         self.select_start_to_end_color = color
         self.select_start_to_end_alpha = float(alpha)
 
-    def init_text_buffer_value(self): # 123456    
-        notes_symbol = "#"
+    def init_text_buffer_value(self):
+        notes_symbol = ";"
+        tab_num = 4    
+        view_bg_color = "#FFFFFF"
+        ch_fg_color = "#000000"
+        select_row_alpha = 0.1
+        select_row_color = "#4169E1"
+        
         config_notes_symbol = self.code_edit_config.get("TEXT_BUFFER_VALUE", "notes_symbol")
         if config_notes_symbol:
-            notes_symbol = config_notes_symbol
+            notes_symbol = config_notes_symbol            
+        config_tab_num = self.code_edit_config.get("TEXT_BUFFER_VALUE", "tab_num")
+        if config_tab_num:
+            tab_num = config_tab_num
+        config_view_bg_color = self.code_edit_config.get("TEXT_BUFFER_VALUE", "text_source_view_bg_color")
+        if config_view_bg_color:
+            view_bg_color = config_view_bg_color
+        config_ch_fg_color = self.code_edit_config.get("TEXT_BUFFER_VALUE", "VARIABLE")    
+        if config_ch_fg_color:    
+            ch_fg_color = config_ch_fg_color
+        config_select_row_alpha = self.code_edit_config.get("TEXT_BUFFER_VALUE", "select_row_alpha")    
+        if config_select_row_alpha:
+            select_row_alpha = config_select_row_alpha        
+        config_select_row_color = self.code_edit_config.get("TEXT_BUFFER_VALUE", "select_row_color")
+        if config_select_row_color:    
+            select_row_color = config_select_row_color
             
         self.text_buffer_list = [""]
         self.tab_string = "    "
         self.current_row = 1
         self.cursor_row  = 1        
         self.map_buffer = None
-        self.text_source_view_bg_color = "#FFFFFF" # 整个代码编辑器的背景:白色.
-        self.ch_fg_color = "#000000" # 显示文本中字符的初始化颜色值:黑色.
-        self.select_row_color = "#4169E1"
-        self.select_row_alpha   = 0.1
+        #######################
+        self.text_source_view_bg_color = str(view_bg_color) # 整个代码编辑器的背景:白色.
+        self.ch_fg_color = str(ch_fg_color) # 显示文本中字符的初始化颜色值:黑色.        
+        #####################
+        self.select_row_alpha = float(select_row_alpha)
+        self.select_row_color = str(select_row_color)
         self.scan_file_ini = self.language_path
         self.notes_symbol = notes_symbol
         
@@ -952,8 +994,15 @@ class CodeEdit(gtk.ScrolledWindow):
     def save_file(self, file_path):    
         fp = open(file_path, "w")
         fp.write(self.buffer_to_text())
-        fp.close()
-    
+        fp.close()    
+        
+    def clear(self):  
+        self.text_buffer_list = [""]
+        self.current_row = 1
+        self.cursor_row = 1
+        self.cursor_padding_x = 0
+        self.cursor_column = 0
+        
     ############################################################    
     '''Tool function.'''
     ###
